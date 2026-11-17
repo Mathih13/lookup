@@ -2,9 +2,25 @@
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
   "runtime.version": "Lua 5.1",
   "runtime.builtin": {
-    "basic": "disable", "debug": "disable", "io": "disable", "math": "disable", "os": "disable",
-    "package": "disable", "string": "disable", "table": "disable", "utf8": "disable"
+    "basic": "disable",
+    "debug": "disable",
+    "io": "disable",
+    "math": "disable",
+    "os": "disable",
+    "package": "disable",
+    "string": "disable",
+    "table": "disable",
+    "utf8": "disable"
   },
-  "workspace.library": [".tools/vscode-wow-api/Annotations/Core"],
-  "workspace.ignoreDir": [".tools", "tests"]
+  "workspace.library": [
+    ".tools/vscode-wow-api/Annotations/Core",
+    ".tools/wow-ui-source/Interface"
+  ],
+  "workspace.ignoreDir": [
+    ".tools",
+    "tests"
+  ],
+  "diagnostics.globals": [
+    "CharacterFrame"
+  ]
 }
