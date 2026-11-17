@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.lua) cd \"$CLAUDE_PROJECT_DIR\" && out=$(make -s check test 2>&1) || { printf '%s\\n' \"$out\" | sed 's/\\x1b\\[[0-9;]*m//g' >&2; exit 2; };; esac",
+            "statusMessage": "make check test"
+          }
+        ]
+      }
+    ]
+  }
+}

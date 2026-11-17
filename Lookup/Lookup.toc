@@ -1,0 +1,7 @@
+## Interface: 16001
+## Title: Lookup
+## Version: 0.1.0
+## SavedVariables: LookupLog
+
+Debug.lua
+Lookup.lua
