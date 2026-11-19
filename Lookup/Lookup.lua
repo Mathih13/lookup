@@ -14,7 +14,7 @@ SlashCmdList.LOOKUP = function(msg)
 	if msg == "probe" then
 		ns.probe()
 	elseif msg == "reset" then
-		LookupDB.history = {}
+		ns.forget(LookupDB)
 		print("Lookup: history cleared.")
 	else
 		ns.toggle()

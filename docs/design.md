@@ -90,7 +90,8 @@ Decided 2026-11-19 from mock v13.
 - A query that starts with `/` lists only slash commands. With only `/` typed, the most used come first, then addon commands, then by name. An exact alias (`/atr`, `/w`) goes first.
 - Rows show the addon's TOC icon (`IconTexture` or `IconAtlas`), the addon title and the aliases.
 - Enter runs the command as it is. Space on a command makes it a grey token in the field, and the rest of the query is its argument.
-- With a token, the rows are the arguments you ran before with that command (`LookupDB.args`), then a last row that runs exactly what you typed. Backspace on an empty argument removes the token.
+- With a token, the rows are the arguments you ran before with that command (`LookupDB.args`, the 20 most recent per command), then a last row that runs exactly what you typed. Backspace on an empty argument removes the token.
+- The Query session (`Session.lua`) owns all of this, the calculator and pick memory; `UI.lua` paints its view. `/lookup reset` forgets entries and arguments.
 - A typed line that matches no command, or that has a space, gets an "As typed" row, so any command still runs.
 - Later: Blizzard commands with known arguments (`/w` and `/invite` take people, `/join` takes channels), and subcommands from AceConfig tables. Learning subcommands from `help` output is optional and runs only on request.
 

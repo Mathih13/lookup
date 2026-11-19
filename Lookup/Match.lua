@@ -244,8 +244,8 @@ function ns.boost(h, now)
 	return math.min(h.count, 10) * 50 / (1 + age / 7)
 end
 
----Rank entries for a query. Returns at most `limit` entries, and the number of matches.
----Sets `hl` (matched ranges) on each returned entry.
+---Rank entries for a query. Returns at most `limit` rows ({ entry, hl = matched ranges }),
+---and the number of matches. Entries are not changed, apart from a cached `norm`.
 ---@param entries table[] each has `name`, `rank` (category order), `key` (history id); `norm` is cached here
 ---@param query string raw text
 ---@param history table<string, {count: number, last: number}>
@@ -269,8 +269,7 @@ function ns.rank(entries, query, history, now, limit)
 	end)
 	local out = {}
 	for i = 1, math.min(limit, #hits) do
-		out[i] = hits[i].entry
-		out[i].hl = hits[i].hl
+		out[i] = { entry = hits[i].entry, hl = hits[i].hl }
 	end
 	return out, #hits
 end

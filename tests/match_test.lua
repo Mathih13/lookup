@@ -13,22 +13,22 @@ local entries = {
 }
 local function names(list)
 	local t = {}
-	for i, x in ipairs(list) do t[i] = x.name end
+	for i, x in ipairs(list) do t[i] = x.entry and x.entry.name or x.name end
 	return table.concat(t, ",")
 end
 local now = 1000000
 
 -- word prefix
-assert(ns.rank(entries, "Damage me-", {}, now, 8)[1].name == "Damage Meter")
-assert(ns.rank(entries, "curr", {}, now, 8)[1].name == "Currency")
+assert(ns.rank(entries, "Damage me-", {}, now, 8)[1].entry.name == "Damage Meter")
+assert(ns.rank(entries, "curr", {}, now, 8)[1].entry.name == "Currency")
 assert(names(ns.rank(entries, "ashen", {}, now, 8)) == "Ashenvale,Quests in Ashenvale (3)", names(ns.rank(entries, "ashen", {}, now, 8)))
 -- initials, alias
-assert(ns.rank(entries, "bd", {}, now, 8)[1].name == "Blackfathom Deeps")
-assert(ns.rank(entries, "rep", {}, now, 8)[1].name == "Reputation")
-assert(ns.rank(entries, "lfg", {}, now, 8)[1].name == "Dungeon Finder")
+assert(ns.rank(entries, "bd", {}, now, 8)[1].entry.name == "Blackfathom Deeps")
+assert(ns.rank(entries, "rep", {}, now, 8)[1].entry.name == "Reputation")
+assert(ns.rank(entries, "lfg", {}, now, 8)[1].entry.name == "Dungeon Finder")
 -- fuzzy ranks below prefix: "ma" prefixes Mage Armor and Meter's second word? "meter" no; fuzzy hits Damage
 local r = ns.rank(entries, "ma", {}, now, 8)
-assert(r[1].name == "Mage Armor", names(r))
+assert(r[1].entry.name == "Mage Armor", names(r))
 -- empty query matches nothing; no match
 assert(#ns.rank(entries, "", {}, now, 8) == 0)
 assert(#ns.rank(entries, "zzz", {}, now, 8) == 0)
@@ -52,7 +52,7 @@ assert(ns.highlight("a|b", nil, "<") == "a||b")
 local hist = {}
 for _ = 1, 10 do ns.remember(hist, "Damage Meter", now) end
 r = ns.rank(entries, "ma", hist, now, 8)
-assert(r[1].name == "Mage Armor" and r[2].name == "Damage Meter", names(r))
+assert(r[1].entry.name == "Mage Armor" and r[2].entry.name == "Damage Meter", names(r))
 -- recent
 ns.remember(hist, "Currency", now + 5)
 ns.remember(hist, "Gone", now + 9)

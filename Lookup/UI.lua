@@ -7,7 +7,7 @@
 -- does not open in combat, because LookupRun cannot move or change then.
 local _, ns = ...
 
-local MAX_ROWS, RECENT_ROWS = 8, 5
+local MAX_ROWS = 8 -- must match Session.lua
 local WIDTH, GUTTER, TOP, BOTTOM = 540, 12, 10, 8
 local SEARCH_H, HEADER_H, ROW_H, ROW_GAP, STATUS_H = 28, 18, 38, 2, 28
 local ROWS_TOP = TOP + SEARCH_H + 10
@@ -126,12 +126,8 @@ local tab = CreateFrame("Button", "LookupTab", UIParent, "SecureActionButtonTemp
 tab:SetAttribute("type", "click")
 tab:SetAttribute("useOnKeyDown", false) -- /click sends only the release
 local armed -- the selected entry's Action plan (Action.lua)
-
-local query, results, selected, rows = "", {}, 1, {}
-local entries -- built on open
--- Command mode: a query that starts with "/" lists only commands. Space on a command makes it
--- the token, and the query becomes its argument text.
-local token
+local session -- the Query session (Session.lua), made on first open: LookupDB loads after this file
+local rows = {}
 
 local function inCombat() return InCombatLockdown() end
 
@@ -162,10 +158,11 @@ local function setIcon(row, entry)
 	end
 end
 
-local function setRow(row, entry)
+local function setRow(row, r)
+	local entry = r.entry
 	row.entry = entry
 	setIcon(row, entry)
-	row.name:SetText(query ~= "" and ns.highlight(entry.name, entry.hl, GOLD) or entry.name:gsub("|", "||"))
+	row.name:SetText(ns.highlight(entry.name, r.hl, GOLD))
 	row.sub:SetText(entry.cat .. (entry.sub and " · " .. entry.sub or ""))
 	local checked = entry.toggle and entry.toggle.get()
 	row.checkbox:SetShown(entry.toggle ~= nil)
@@ -174,26 +171,13 @@ local function setRow(row, entry)
 	row:Show()
 end
 
-local function setStatus(entry)
-	if not entry then
-		statusLeft:SetText(query ~= "" and "No matches" or "")
-		statusRight:SetText("")
-		return
-	end
-	local action = entry.action
-	if type(action) == "function" then action = action() end
-	statusLeft:SetText(WHITE .. "Enter:|r " .. (action or entry.line and "Run " .. entry.line or "Open"))
-	if entry.drag then
-		statusRight:SetText(WHITE .. "Drag:|r " .. (entry.dragHint or "to your bars"))
-	elseif entry.toggle then
-		statusRight:SetText(WHITE .. "Shift-Enter:|r keep open")
-	elseif entry.slash and not token and query:sub(1, 1) == "/" then
-		statusRight:SetText(WHITE .. "Space:|r add text")
-	elseif token and query == "" then
-		statusRight:SetText(WHITE .. "Backspace:|r back to commands")
+local function setStatus(status)
+	if status.message then
+		statusLeft:SetText(status.message)
 	else
-		statusRight:SetText("")
+		statusLeft:SetText(WHITE .. "Enter:|r " .. status.action)
 	end
+	statusRight:SetText(status.right and WHITE .. status.right[1] .. ":|r " .. status.right[2] or "")
 end
 
 for i = 1, MAX_ROWS do
@@ -248,7 +232,7 @@ end
 -- Put the selected entry's action on LookupRun and LookupRun over its row.
 local function arm()
 	if inCombat() then return end
-	local row = rows[selected]
+	local row = rows[session.selected]
 	local entry = row and row:IsShown() and row.entry
 	armed = nil
 	if not entry then
@@ -258,7 +242,7 @@ local function arm()
 	end
 	local tabButton = entry.tab and entry.tab()
 	armed = ns.plan(entry, tabButton and tabButton:IsVisible())
-	if not armed then -- not reached: collect drops entries with invalid actions
+	if not armed then -- not reached: the registry drops entries with invalid actions
 		run:Hide()
 		ClearOverrideBindings(bindOwner)
 		return
@@ -289,139 +273,46 @@ local function disarm()
 end
 
 function ns.select(i)
-	if i < 1 or i > #results then return end
-	selected = i
+	session:select(i)
 	for j, row in ipairs(rows) do
-		local on = j == i and row:IsShown()
-		row.highlight:SetShown(on)
+		row.highlight:SetShown(j == session.selected and row:IsShown())
 	end
-	setStatus(results[i])
+	setStatus(session:view().status)
 	arm()
 end
 
--- A calculator row for arithmetic queries. Enter puts the result in the box.
-local function calcEntry()
-	local v = ns.calc(query)
-	if not v then return nil end
-	return { name = ns.formatNumber(v), cat = "Calculator", sub = query:gsub("|", "||"), rank = 0,
-		icon = "Interface/Icons/INV_Misc_Note_01", calc = true, action = "Use the result", call = function() end }
-end
-
--- A row that runs the token's command with this argument text ("" runs it bare).
-local function argEntry(arg, cat)
-	local line = arg == "" and token.slash or token.slash .. " " .. arg
-	return { name = cat == "Recent" and arg or line, cat = cat, rank = 0, key = arg, argOf = token,
-		icon = token.icon, atlas = token.atlas, action = "Run " .. line, line = line }
-end
-
-local function argRows()
-	local history = LookupDB.args[token.slash] or {}
-	local list = {}
-	for arg in pairs(history) do list[#list + 1] = argEntry(arg, "Recent") end
-	local out = query == "" and ns.recent(list, history, MAX_ROWS - 1)
-		or ns.rank(list, query, history, time(), MAX_ROWS - 1)
-	if not (out[1] and out[1].name == query) then out[#out + 1] = argEntry(query, "As typed") end
-	return out
-end
-
-local function commandRows()
-	local list = {}
-	for _, e in ipairs(entries) do
-		if e.slash then list[#list + 1] = e end
-	end
-	local out, total
-	if query == "/" then
-		-- Nothing to match yet: most used first, then addon commands, then by name.
-		local history, now = LookupDB.history, time()
-		table.sort(list, function(a, b)
-			local ba, bb = ns.boost(history[a.key], now), ns.boost(history[b.key], now)
-			if ba ~= bb then return ba > bb end
-			if (a.addon ~= nil) ~= (b.addon ~= nil) then return a.addon ~= nil end
-			return a.name < b.name
-		end)
-		out, total = {}, #list
-		for i = 1, math.min(MAX_ROWS, #list) do
-			list[i].hl = nil
-			out[i] = list[i]
-		end
-		return out, total
-	end
-	out, total = ns.rank(list, query, LookupDB.history, time(), MAX_ROWS)
-	-- An exact alias ("/atr", "/w") goes first.
-	local typed = query:lower()
-	for _, e in ipairs(list) do
-		for _, alias in ipairs(e.aliases) do
-			if alias:lower() == typed then
-				for i = #out, 1, -1 do
-					if out[i] == e then table.remove(out, i) end
-				end
-				e.hl = nil
-				table.insert(out, 1, e)
-				out[MAX_ROWS + 1] = nil
-			end
-		end
-	end
-	-- Commands Lookup does not list, or a command with its text typed in, still run as typed.
-	if #out == 0 or query:find(" ") then
-		table.insert(out, math.min(#out + 1, MAX_ROWS), { name = query, cat = "As typed", rank = 0, key = "typed",
-			icon = "Interface/Icons/UI_Chat", action = "Run " .. query, line = query })
-		out[MAX_ROWS + 1] = nil
-	end
-	return out, total
-end
-
+-- Paint the session's view.
 local function refresh()
-	local shown = query:gsub("|", "||")
-	if token then shown = "|cff9a9a9a" .. token.slash .. "|r " .. shown end
+	local view = session:view()
+	local shown = view.query:gsub("|", "||")
+	if view.token then shown = "|cff9a9a9a" .. view.token .. "|r " .. shown end
 	input:SetText(shown)
 	local width = input:GetStringWidth()
-	local hint = token and query == "" and "Type text or pick"
-		or not token and query == "/" and "Type a command"
-		or query == "" and "Search spells, quests, zones, settings..."
-	placeholder:SetText(hint or "")
-	placeholder:SetShown(hint ~= false)
+	placeholder:SetText(view.hint or "")
+	placeholder:SetShown(view.hint ~= nil)
 	placeholder:ClearAllPoints()
 	placeholder:SetPoint("LEFT", input, "LEFT", width > 0 and width + 4 or 2, 0)
 	caret:SetPoint("LEFT", input, "LEFT", width + 1, 0)
-	local total
-	if token then
-		results = argRows()
-	elseif query:sub(1, 1) == "/" then
-		results, total = commandRows()
-	elseif query == "" then
-		results = ns.recent(entries, LookupDB.history, RECENT_ROWS)
-	else
-		results, total = ns.rank(entries, query, LookupDB.history, time(), MAX_ROWS)
-		local calc = calcEntry()
-		if calc then
-			table.insert(results, 1, calc)
-			results[MAX_ROWS + 1] = nil
-		end
-	end
-	count:SetText(total and total > #results and (#results .. " of " .. total) or "")
-	local header = query == "" and not token and #results > 0
-	recentLabel:SetShown(header)
-	local top = ROWS_TOP + (header and HEADER_H or 0)
-	selected = math.min(selected, math.max(#results, 1))
+	count:SetText(view.count)
+	recentLabel:SetShown(view.header ~= nil)
+	recentLabel:SetText(view.header or "")
+	local top = ROWS_TOP + (view.header and HEADER_H or 0)
 	for i, row in ipairs(rows) do
-		if results[i] then
+		if view.rows[i] then
 			row:ClearAllPoints()
 			row:SetPoint("TOPLEFT", GUTTER, -top - (i - 1) * (ROW_H + ROW_GAP))
 			row:SetPoint("TOPRIGHT", -GUTTER, -top - (i - 1) * (ROW_H + ROW_GAP))
-			setRow(row, results[i])
+			setRow(row, view.rows[i])
 		else
 			row:Hide()
 		end
 	end
-	local showStatus = #results > 0 or query ~= ""
+	local n = #view.rows
+	local showStatus = n > 0 or view.query ~= "" or view.token ~= nil
 	status:SetShown(showStatus)
-	local rowsH = #results > 0 and #results * (ROW_H + ROW_GAP) - ROW_GAP or 0
+	local rowsH = n > 0 and n * (ROW_H + ROW_GAP) - ROW_GAP or 0
 	box:SetHeight(showStatus and top + rowsH + 6 + STATUS_H + BOTTOM or TOP + SEARCH_H + TOP)
-	ns.select(selected)
-	if #results == 0 then
-		setStatus(nil)
-		arm()
-	end
+	ns.select(view.selected)
 end
 
 function ns.close()
@@ -433,21 +324,9 @@ end
 ---part (LookupRun click or binding command), or alone when there is none.
 function ns.activate(entry)
 	if not entry then return end
-	if entry.calc then
-		query, selected = entry.name, 1
+	if session:pick(entry) then -- the calculator: its result is now the query
 		refresh()
 		return
-	end
-	if entry.argOf then
-		local command = entry.argOf.slash
-		ns.remember(LookupDB.history, entry.argOf.key, time())
-		if entry.cat == "Recent" or (entry.key ~= "" and entry.cat == "As typed") then
-			-- ponytail: argument history grows without a cap; trim it if it ever gets long.
-			LookupDB.args[command] = LookupDB.args[command] or {}
-			ns.remember(LookupDB.args[command], entry.key, time())
-		end
-	elseif entry.key ~= "typed" then
-		ns.remember(LookupDB.history, entry.key, time())
 	end
 	ns.log("activate", entry.key)
 	local keep = IsShiftKeyDown()
@@ -461,10 +340,10 @@ function ns.activate(entry)
 end
 
 run:HookScript("OnClick", function(_, _, down)
-	if not down then ns.activate(rows[selected] and rows[selected].entry) end
+	if not down then ns.activate(session:selectedEntry()) end
 end)
 run:SetScript("OnDragStart", function()
-	local entry = rows[selected] and rows[selected].entry
+	local entry = session:selectedEntry()
 	if entry and entry.drag then
 		ns.close()
 		entry.drag()
@@ -472,23 +351,14 @@ run:SetScript("OnDragStart", function()
 end)
 
 box:SetScript("OnChar", function(_, char)
-	if query == "" and char == " " then return end -- the Shift+Space that opened the box
-	-- Space after a command name makes it the token (command mode).
-	local picked = results[selected]
-	if char == " " and not token and query:sub(1, 1) == "/" and not query:find(" ") and picked and picked.slash then
-		token, query, selected = picked, "", 1
-		refresh()
-		return
-	end
-	query = query .. char
-	selected = 1
+	session:type(char)
 	refresh()
 end)
 
 box:SetScript("OnKeyDown", function(self, key)
 	local propagate = false
 	if key == "ENTER" then
-		local entry = rows[selected] and rows[selected].entry
+		local entry = session:selectedEntry()
 		if entry and armed and armed.enter == "binding" then
 			propagate = true -- the override binding runs the command
 			C_Timer.After(0, function() ns.activate(entry) end)
@@ -500,19 +370,12 @@ box:SetScript("OnKeyDown", function(self, key)
 	elseif key == "ESCAPE" then
 		ns.close()
 	elseif key == "BACKSPACE" then
-		if token and query == "" then
-			query, token = token.slash, nil -- back to the command, to edit it
-		elseif IsControlKeyDown() then
-			query = query:gsub("%S*%s*$", "")
-		else
-			query = query:gsub("[\128-\191]*.$", "") -- one UTF-8 character
-		end
-		selected = 1
+		session:backspace(IsControlKeyDown())
 		refresh()
 	elseif key == "UP" then
-		ns.select(selected - 1)
+		ns.select(session.selected - 1)
 	elseif key == "DOWN" or key == "TAB" then
-		ns.select(selected + 1)
+		ns.select(session.selected + 1)
 	elseif key == "SPACE" and IsShiftKeyDown() then
 		ns.close() -- the open binding also closes
 	elseif key == "PRINTSCREEN" then
@@ -536,9 +399,10 @@ function ns.toggle()
 		return
 	end
 	local start = debugprofilestop()
-	entries = ns.collect()
+	local entries = ns.collect()
 	ns.log("index", #entries, "entries in", math.floor(debugprofilestop() - start), "ms")
-	query, selected, token = "", 1, nil
+	session = session or ns.newSession(LookupDB, time)
+	session:open(entries)
 	box:Show()
 	refresh()
 end
