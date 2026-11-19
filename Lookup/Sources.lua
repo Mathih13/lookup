@@ -1,9 +1,5 @@
 -- Entry sources, one per category in docs/design.md. Each runs on every open.
---
--- Panel opens must not run from plain addon code (they taint the action bars).
--- `command` runs a Blizzard key binding command through an override binding on
--- Enter, which is secure. `secure` is the mouse path (and Enter when there is
--- no command). `run` runs after them as plain code: only calls proven clean.
+-- Each entry sets one action kind (binding, line, call, toggle): see Action.lua.
 local _, ns = ...
 local add -- set by each source call
 
@@ -28,7 +24,6 @@ local function label(global, command)
 	return s and (s:gsub("^Toggle ", "")) or nil
 end
 
-local function click(button) return { type = "macro", macrotext = "/click " .. button } end
 
 ---Text in a colour from a Blizzard colour table ({r, g, b}).
 local function paint(c, s)
@@ -83,34 +78,28 @@ src(function()
 			add({
 				name = name, cat = "Panel", rank = RANK.panel, key = "panel:" .. p[2],
 				icon = icon or 133633, atlas = atlas, portrait = portrait,
-				command = p[2], binding = p[2], secure = p[3] and click(p[3]),
+				binding = p[2], button = p[3],
 			})
 		end
 	end
 	add({ name = MACROS or "Macros", cat = "Panel", rank = RANK.panel, key = "panel:macros",
-		icon = 136377, secure = { type = "macro", macrotext = "/macro" } })
+		icon = 136377, line = "/macro" })
 	add({ name = SETTINGS or "Settings", cat = "Panel", rank = RANK.panel, key = "panel:settings",
-		atlas = "UI-HUD-MicroMenu-GameMenu-Up", run = function() Settings.OpenToCategory() end })
+		atlas = "UI-HUD-MicroMenu-GameMenu-Up", call = function() Settings.OpenToCategory() end })
 	add({ name = KEY_BINDINGS or "Key Bindings", cat = "Panel", rank = RANK.panel, key = "panel:keybindings",
 		atlas = "UI-HUD-MicroMenu-GameMenu-Up",
-		run = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end })
+		call = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end })
 end)
 
 -- 2. Settings and key bindings -------------------------------------------------
 
-local function onOff(v) return v and "On" or "Off" end
 
 ---A boolean setting: the row shows a checkbox, Enter flips it and prints the new state.
 local function toggle(name, sub, key, get, set)
 	add({
 		name = name, cat = "Setting", sub = sub, rank = RANK.setting, key = key, icon = 136243,
-		check = get,
+		toggle = { get = get, set = set },
 		action = function() return get() and "Turn off" or "Turn on" end,
-		run = function()
-			local v = not get()
-			set(v)
-			print(name .. ": " .. onOff(v))
-		end,
 	})
 end
 
@@ -130,7 +119,7 @@ local function addSetting(category, path, initializer)
 		add({
 			name = name, cat = "Setting", sub = path, rank = RANK.setting, key = "setting:" .. variable,
 			icon = 136243, action = "Open settings",
-			run = function() Settings.OpenToCategory(categoryID, name) end,
+			call = function() Settings.OpenToCategory(categoryID, name) end,
 		})
 	end
 end
@@ -141,7 +130,7 @@ local function walkCategory(category, parentName)
 	local name = category:GetName()
 	local path = parentName and parentName .. " > " .. name or name
 	add({ name = name, cat = "Settings", sub = parentName, rank = RANK.setting, key = "settings:" .. tostring(id),
-		icon = 136243, action = "Open settings", run = function() Settings.OpenToCategory(id) end })
+		icon = 136243, action = "Open settings", call = function() Settings.OpenToCategory(id) end })
 	local layout = SettingsPanel:GetLayout(category)
 	if layout and layout:IsVerticalLayout() then
 		for _, initializer in layout:EnumerateInitializers() do
@@ -177,15 +166,14 @@ src(function()
 			-- ponytail: a runOnUp binding misses its release (the box closes first); handle it if an addon needs it.
 			add({
 				name = name, cat = "Key binding", sub = type(headerName) == "string" and headerName or by,
-				rank = RANK.setting, key = "binding:" .. command, icon = 136243, binding = command,
-				command = command, action = "Run",
+				rank = RANK.setting, key = "binding:" .. command, icon = 136243, binding = command, action = "Run",
 			})
 		elseif name then
 			add({
 				name = name, cat = "Key binding", sub = type(headerName) == "string" and headerName or nil,
-				rank = RANK.setting, key = "binding:" .. command, icon = 136243, binding = command,
+				rank = RANK.setting, key = "binding:" .. command, icon = 136243, shortcut = command,
 				value = not key1 and "Not bound" or nil, action = "Open key bindings",
-				run = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
+				call = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
 			})
 		end
 	end
@@ -212,7 +200,7 @@ src(function()
 			if low and low > 0 then levels = low == high and "Lvl " .. low or "Lvl " .. low .. "-" .. high end
 			add({ name = m.name, cat = kind, sub = mapNames[m.parentMapID], rank = RANK.zone, key = "zone:" .. mapID,
 				icon = 137176, value = levels, action = "Open map",
-				run = function() OpenWorldMap(mapID) end })
+				call = function() OpenWorldMap(mapID) end })
 		end
 	end
 end)
@@ -244,7 +232,7 @@ src(function()
 			add({ name = q.title, cat = "Quest", sub = sub, rank = RANK.quest, key = "quest:" .. questID,
 				atlas = C_QuestLog.IsComplete(questID) and "QuestTurnin" or "Quest-In-Progress-Icon-yellow",
 				value = function() return questProgress(questID) end, action = "Show in quest log",
-				run = function() QuestMapFrame_OpenToQuestDetails(questID) end })
+				call = function() QuestMapFrame_OpenToQuestDetails(questID) end })
 			---@diagnostic disable-next-line: redundant-parameter -- the annotation lacks the questID parameter
 			local mapID = GetQuestUiMapID(questID)
 			if mapID and mapID > 0 then perMap[mapID] = (perMap[mapID] or 0) + 1 end
@@ -254,8 +242,8 @@ src(function()
 		local info = mapNames[mapID] and { name = mapNames[mapID] } or C_Map.GetMapInfo(mapID)
 		if info then
 			add({ name = "Quests in " .. info.name, cat = "Quests", rank = RANK.quest, value = tostring(n),
-				key = "questzone:" .. mapID, icon = 136797, binding = "TOGGLEQUESTLOG", action = "Open quest log",
-				run = function() OpenQuestLog(mapID) end })
+				key = "questzone:" .. mapID, icon = 136797, shortcut = "TOGGLEQUESTLOG", action = "Open quest log",
+				call = function() OpenQuestLog(mapID) end })
 		end
 	end
 end)
@@ -268,7 +256,7 @@ src(function()
 		if collected and not hidden then
 			add({ name = name, cat = "Mount", rank = RANK.collection, key = "mount:" .. id, icon = icon,
 				action = "Show in mount journal",
-				run = function()
+				call = function()
 					SetCollectionsJournalShown(true, COLLECTIONS_JOURNAL_TAB_INDEX_MOUNTS)
 					MountJournal_SelectByMountID(id)
 				end,
@@ -281,7 +269,7 @@ src(function()
 			add({ name = customName or speciesName, cat = "Pet", sub = customName and speciesName or nil,
 				rank = RANK.collection, key = "pet:" .. petID, icon = icon,
 				value = level and "Lvl " .. level or nil, action = "Show in pet journal",
-				run = function()
+				call = function()
 					SetCollectionsJournalShown(true, COLLECTIONS_JOURNAL_TAB_INDEX_PETS)
 					PetJournal_SelectPet(PetJournal, petID)
 				end,
@@ -295,7 +283,7 @@ src(function()
 			if name then
 				add({ name = name, cat = "Toy", rank = RANK.collection, key = "toy:" .. itemID, icon = icon,
 					action = "Show in toy box",
-					run = function() ToggleToyCollection(itemID) end,
+					call = function() ToggleToyCollection(itemID) end,
 					drag = function() C_ToyBox.PickupToyBoxItem(itemID) end })
 			end
 		end
@@ -341,7 +329,7 @@ src(function()
 		-- No page jump: GoToSpell from addon code taints the spellbook and the action bars.
 		add({ name = name, cat = s.isPassive and "Passive" or "Spell", sub = b.lineName, rank = RANK.spell,
 			key = "spell:" .. name, icon = s.iconID, value = rankText, action = "Open spellbook",
-			command = "TOGGLESPELLBOOK", secure = click("SpellbookMicroButton"),
+			binding = "TOGGLESPELLBOOK", button = "SpellbookMicroButton",
 			tab = function() return spellTab(line) end,
 			dragHint = rankText and rankText .. " to your bars",
 			drag = not s.isPassive and function() C_SpellBook.PickupSpellBookItem(slot, bank) end or nil })
@@ -358,8 +346,8 @@ src(function()
 		if not name then return end
 		add({ name = name, cat = "Macro", sub = tab == 1 and "Account" or "Character", rank = RANK.macro,
 			key = "macro:" .. name, icon = icon, action = "Open macros",
-			secure = { type = "macro", macrotext = "/macro" },
-			run = function()
+			line = "/macro",
+			after = function()
 				if MacroFrame and MacroFrame:IsShown() then
 					MacroFrame:ChangeTab(tab)
 					MacroFrame:SelectMacro(tabIndex, true)
@@ -398,8 +386,8 @@ src(function()
 				local n = C_Item.GetItemCount(info.itemID)
 				add({ name = name, cat = "Item", rank = RANK.item, key = "item:" .. info.itemID,
 					icon = info.iconFileID, value = n > 1 and "×" .. n or nil, action = "Show in bags",
-					command = "OPENALLBAGS", secure = click("MainMenuBarBackpackButton"),
-					run = function()
+					binding = "OPENALLBAGS", button = "MainMenuBarBackpackButton",
+					after = function()
 						C_Container.SetItemSearch(name)
 						bagSearchSet = true
 					end,
@@ -417,7 +405,7 @@ src(function()
 		if c and not c.isHeader and c.name then
 			add({ name = c.name, cat = "Currency", rank = RANK.progress, key = "currency:" .. (c.currencyID or c.name),
 				icon = c.iconFileID or CURRENCY_ICON, value = c.quantity and "|cffffffff" .. c.quantity .. "|r",
-				action = "Open currency", command = "TOGGLECURRENCY", secure = click("CharacterMicroButton") })
+				action = "Open currency", binding = "TOGGLECURRENCY", button = "CharacterMicroButton" })
 		end
 	end
 	for i = 1, C_Reputation.GetNumFactions() do
@@ -426,7 +414,7 @@ src(function()
 			local standing = f.reaction and _G["FACTION_STANDING_LABEL" .. f.reaction]
 			add({ name = f.name, cat = "Reputation", rank = RANK.progress, key = "rep:" .. f.factionID,
 				icon = REP_ICON, value = type(standing) == "string" and paint(FACTION_BAR_COLORS[f.reaction], standing) or nil,
-				action = "Open reputation", command = "TOGGLECHARACTER2", secure = click("CharacterMicroButton") })
+				action = "Open reputation", binding = "TOGGLECHARACTER2", button = "CharacterMicroButton" })
 		end
 	end
 	for _, category in ipairs(GetCategoryList() or {}) do
@@ -435,7 +423,7 @@ src(function()
 			if id then
 				add({ name = name, cat = "Legacy Challenge", rank = RANK.progress, key = "ach:" .. id, icon = icon,
 					value = completed and GREEN .. "Complete|r" or nil, action = "Open Legacy Challenges",
-					command = "TOGGLELEGACYSYSTEM", secure = click("LegacyMicroButton") })
+					binding = "TOGGLELEGACYSYSTEM", button = "LegacyMicroButton" })
 			end
 		end
 	end
@@ -454,7 +442,7 @@ src(function()
 			name = command, cat = "Command", sub = by and (also and by .. " · " .. also or by) or also,
 			rank = RANK.slash, key = "slash:" .. command, slash = command, aliases = aliases, addon = by,
 			icon = iconFile or (folder and 136243 or "Interface/Icons/UI_Chat"), atlas = iconAtlas or nil,
-			action = "Run " .. command, secure = { type = "macro", macrotext = command },
+			action = "Run " .. command, line = command,
 		})
 	end)
 end)
@@ -484,7 +472,7 @@ end
 local function whisper(name, key, cat, sub, file, send)
 	add({ name = name, cat = cat, sub = sub, rank = RANK.people, key = key,
 		icon = not file and 132200 or nil, atlas = file and "groupfinder-icon-class-" .. file:lower(),
-		action = "Whisper", run = send })
+		action = "Whisper", call = send })
 end
 
 src(function()

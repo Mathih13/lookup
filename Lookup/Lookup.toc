@@ -8,6 +8,7 @@
 
 Debug.lua
 Match.lua
+Action.lua
 Lookup.lua
 Sources.lua
 UI.lua

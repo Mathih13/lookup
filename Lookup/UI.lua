@@ -125,7 +125,7 @@ local bindOwner = CreateFrame("Frame")
 local tab = CreateFrame("Button", "LookupTab", UIParent, "SecureActionButtonTemplate")
 tab:SetAttribute("type", "click")
 tab:SetAttribute("useOnKeyDown", false) -- /click sends only the release
-local armedCommand -- the binding command Enter runs, if any
+local armed -- the selected entry's Action plan (Action.lua)
 
 local query, results, selected, rows = "", {}, 1, {}
 local entries -- built on open
@@ -138,8 +138,9 @@ local function inCombat() return InCombatLockdown() end
 local function value(entry)
 	local v = entry.value
 	if type(v) == "function" then v = v() end
-	if v == nil and entry.binding then
-		local key = GetBindingKey(entry.binding)
+	local shortcut = entry.shortcut or entry.binding
+	if v == nil and shortcut then
+		local key = GetBindingKey(shortcut)
 		v = key and GetBindingText(key)
 	end
 	return v
@@ -166,10 +167,10 @@ local function setRow(row, entry)
 	setIcon(row, entry)
 	row.name:SetText(query ~= "" and ns.highlight(entry.name, entry.hl, GOLD) or entry.name:gsub("|", "||"))
 	row.sub:SetText(entry.cat .. (entry.sub and " · " .. entry.sub or ""))
-	local checked = entry.check and entry.check()
-	row.checkbox:SetShown(entry.check ~= nil)
+	local checked = entry.toggle and entry.toggle.get()
+	row.checkbox:SetShown(entry.toggle ~= nil)
 	row.checkmark:SetShown(checked or false)
-	row.value:SetText(not entry.check and value(entry) or "")
+	row.value:SetText(not entry.toggle and value(entry) or "")
 	row:Show()
 end
 
@@ -181,10 +182,10 @@ local function setStatus(entry)
 	end
 	local action = entry.action
 	if type(action) == "function" then action = action() end
-	statusLeft:SetText(WHITE .. "Enter:|r " .. (action or "Open"))
+	statusLeft:SetText(WHITE .. "Enter:|r " .. (action or entry.line and "Run " .. entry.line or "Open"))
 	if entry.drag then
 		statusRight:SetText(WHITE .. "Drag:|r " .. (entry.dragHint or "to your bars"))
-	elseif entry.check then
+	elseif entry.toggle then
 		statusRight:SetText(WHITE .. "Shift-Enter:|r keep open")
 	elseif entry.slash and not token and query:sub(1, 1) == "/" then
 		statusRight:SetText(WHITE .. "Space:|r add text")
@@ -249,25 +250,22 @@ local function arm()
 	if inCombat() then return end
 	local row = rows[selected]
 	local entry = row and row:IsShown() and row.entry
+	armed = nil
 	if not entry then
 		run:Hide()
 		ClearOverrideBindings(bindOwner)
 		return
 	end
-	local secure = entry.secure or {}
-	local macrotext = secure.macrotext
 	local tabButton = entry.tab and entry.tab()
-	armedCommand = entry.command
-	if tabButton and macrotext then
-		tab:SetAttribute("clickbutton", tabButton)
-		-- Skip the toggle when the panel is already open, or it would close it.
-		if tabButton:IsVisible() then macrotext = "" end
-		macrotext = macrotext .. "\n/click LookupTab"
-		armedCommand = nil
+	armed = ns.plan(entry, tabButton and tabButton:IsVisible())
+	if not armed then -- not reached: collect drops entries with invalid actions
+		run:Hide()
+		ClearOverrideBindings(bindOwner)
+		return
 	end
-	run:SetAttribute("type", secure.type)
-	run:SetAttribute("macrotext", macrotext)
-	run:SetAttribute("clickbutton", secure.clickbutton and _G[secure.clickbutton])
+	if armed.clickTab then tab:SetAttribute("clickbutton", tabButton) end
+	run:SetAttribute("type", armed.macrotext and "macro" or nil)
+	run:SetAttribute("macrotext", armed.macrotext)
 	-- Screen coordinates, no anchor to the row: an anchor would make the box protected.
 	run:ClearAllPoints()
 	run:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", row:GetLeft(), row:GetTop())
@@ -275,8 +273,8 @@ local function arm()
 	run:SetFrameLevel(row:GetFrameLevel() + 10)
 	run:Show()
 	for _, key in ipairs({ "ENTER", "SHIFT-ENTER" }) do
-		if armedCommand then
-			SetOverrideBinding(bindOwner, true, key, armedCommand) -- Blizzard's binding runs it securely
+		if armed.enter == "binding" then
+			SetOverrideBinding(bindOwner, true, key, armed.command) -- Blizzard's binding runs it securely
 		else
 			SetOverrideBindingClick(bindOwner, true, key, "LookupRun", "LeftButton")
 		end
@@ -306,14 +304,14 @@ local function calcEntry()
 	local v = ns.calc(query)
 	if not v then return nil end
 	return { name = ns.formatNumber(v), cat = "Calculator", sub = query:gsub("|", "||"), rank = 0,
-		icon = "Interface/Icons/INV_Misc_Note_01", calc = true, action = "Use the result" }
+		icon = "Interface/Icons/INV_Misc_Note_01", calc = true, action = "Use the result", call = function() end }
 end
 
 -- A row that runs the token's command with this argument text ("" runs it bare).
 local function argEntry(arg, cat)
 	local line = arg == "" and token.slash or token.slash .. " " .. arg
 	return { name = cat == "Recent" and arg or line, cat = cat, rank = 0, key = arg, argOf = token,
-		icon = token.icon, atlas = token.atlas, action = "Run " .. line, secure = { type = "macro", macrotext = line } }
+		icon = token.icon, atlas = token.atlas, action = "Run " .. line, line = line }
 end
 
 local function argRows()
@@ -366,7 +364,7 @@ local function commandRows()
 	-- Commands Lookup does not list, or a command with its text typed in, still run as typed.
 	if #out == 0 or query:find(" ") then
 		table.insert(out, math.min(#out + 1, MAX_ROWS), { name = query, cat = "As typed", rank = 0, key = "typed",
-			icon = "Interface/Icons/UI_Chat", action = "Run " .. query, secure = { type = "macro", macrotext = query } })
+			icon = "Interface/Icons/UI_Chat", action = "Run " .. query, line = query })
 		out[MAX_ROWS + 1] = nil
 	end
 	return out, total
@@ -431,7 +429,7 @@ function ns.close()
 	box:Hide()
 end
 
----Record the pick, close, then run the entry's plain code. Called after the secure
+---Record the pick, close, then run the plan's plain step. Called after the secure
 ---part (LookupRun click or binding command), or alone when there is none.
 function ns.activate(entry)
 	if not entry then return end
@@ -454,8 +452,9 @@ function ns.activate(entry)
 	ns.log("activate", entry.key)
 	local keep = IsShiftKeyDown()
 	if not keep then ns.close() end
-	if entry.run then
-		local ok, err = pcall(entry.run)
+	local plan = ns.plan(entry)
+	if plan and plan.after then
+		local ok, err = pcall(plan.after)
 		if not ok then ns.log("run failed", entry.key, err) end
 	end
 	if keep and box:IsShown() then refresh() end
@@ -490,10 +489,10 @@ box:SetScript("OnKeyDown", function(self, key)
 	local propagate = false
 	if key == "ENTER" then
 		local entry = rows[selected] and rows[selected].entry
-		if entry and armedCommand then
+		if entry and armed and armed.enter == "binding" then
 			propagate = true -- the override binding runs the command
 			C_Timer.After(0, function() ns.activate(entry) end)
-		elseif entry and entry.secure then
+		elseif entry and armed and armed.enter == "click" then
 			propagate = true -- the override binding clicks LookupRun
 		else
 			ns.activate(entry)

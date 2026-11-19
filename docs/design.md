@@ -2,6 +2,19 @@
 
 Agreed with the user on 2026-11-17. Change this file when a decision changes.
 
+## Terms
+
+Use these words the same way in the code, this file and conversation.
+
+- **Entry**: one result row's data: name, category, context, icon, value, one action.
+- **Action**: what Enter does, from a closed set of kinds: `binding` (a binding command, with an optional `button` for the mouse and `tab`), `line` (one macro line), `call` (plain code), `toggle` (`get` and `set`). `after` is a plain step after a `binding` or a `line`.
+- **Action plan**: how an action runs: an override binding, a LookupRun click, or plain code (`Action.lua`).
+- **Provider**: something that builds entries of one rank: a built-in source, an addon discovery surface, or later an outside addon.
+- **Discovery record**: what an addon discovery surface finds (a slash command, a binding, a LibDataBroker launcher), with the addon that owns it.
+- **Query session**: the typed text, the token, the selection and the mode, and what the box shows for them.
+- **Command mode**: a query that starts with `/`. **Token**: the command picked with Space, whose argument is being typed.
+- **Pick memory**: what the box remembers of your picks: entries, and arguments per command.
+
 ## Product
 
 A Spotlight-style search box for **WoW Forever only** (Interface `16001`). Use Forever's (Camelot) Blizzard UI paths; ignore retail-only systems. Personal tool first, but publishable: display text comes from the game's localized strings. Licence MIT.
@@ -99,7 +112,7 @@ Goal: other addons' features appear with no per-addon code. Decided 2026-11-18 a
 
 Rejected: scanning `_G` for functions (unknown arguments and side effects). The Encounter Journal does not exist on Forever (checked in game 2026-11-18), so boss loot needs a loot addon.
 
-**Providers.** Every source, built-in or discovered, is a provider: `id`, `rank`, `events` that invalidate its cache, `max` entries, `minQuery` letters, `build(add)`. Outside entries give data and one action from a closed set: `binding`, `slash`, `settings`, `toggle = {get, set}`, `call`. Lookup maps the action to a proven mechanism. Only built-in code sets `secure`, `command` or `tab`.
+**Providers.** Every source, built-in or discovered, is a provider: `id`, `rank`, `events` that invalidate its cache, `max` entries, `minQuery` letters, `build(add)`. Every entry gives data and one action from the closed set in "Terms"; the Action plan maps it to a proven mechanism. An entry with no action, two actions, or a line with a newline or over 255 characters is dropped and logged. For outside rows, the status line shows the exact macro line.
 
 **Isolation.** `build` and `call` run in `pcall`. A provider gets 5 ms and 500 entries. Three failures turn it off for the session, with a log line.
 

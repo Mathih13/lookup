@@ -5,20 +5,25 @@ BINDING_NAME_LOOKUP_TOGGLE = "Open search"
 local DEFAULT_KEY = "SHIFT-SPACE"
 
 -- Sources add entries: ns.sources[#ns.sources + 1] = function(add) add({...}) end
--- An entry: name, cat (label), rank (category order), key (history id), icon,
--- atlas or portrait (unit), and actions: command = Blizzard binding command run on Enter, secure =
--- {type=, macrotext=, clickbutton=} for the mouse, run = plain function after them.
--- tab = function returning an unnamed tab Button to click after secure.macrotext.
--- binding = command for the key hint.
--- drag = function that picks the thing up.
+-- An entry: name, cat (label), sub (context), rank (category order), key (history id), icon,
+-- atlas or portrait (unit), value or shortcut (a binding command whose key shows at the right),
+-- one action kind (see Action.lua), and drag = function that picks the thing up.
 ns.sources = {}
 
 function ns.collect()
 	local out = {}
+	local i
 	local function add(e)
-		if type(e.name) == "string" and not issecretvalue(e.name) then out[#out + 1] = e end
+		if type(e.name) ~= "string" or issecretvalue(e.name) then return end
+		local kind, err = ns.actionKind(e)
+		if kind then
+			out[#out + 1] = e
+		else
+			ns.log("source", i, "dropped", e.name, err)
+		end
 	end
-	for i, source in ipairs(ns.sources) do
+	for n, source in ipairs(ns.sources) do
+		i = n
 		local ok, err = pcall(source, add)
 		if not ok then ns.log("source", i, "failed:", err) end
 	end
