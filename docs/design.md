@@ -100,15 +100,18 @@ Goal: other addons' features appear with no per-addon code. Decided 2026-11-18 a
 
 **Attribution.** `issecurevariable(table, key)` names the addon that set a value. Lookup uses it to tell addon commands and bindings from Blizzard's, and shows the addon's title as the context.
 
-**Surfaces, in build order:**
+**Surfaces.** `Discovery.lua` finds them and returns discovery records; a provider per surface in `Sources.lua` turns them into entries.
 
-| Surface | Rows | Enter does |
-|---|---|---|
-| Addon slash commands (`SlashCmdList` and its hidden import table, `SLASH_*1` tainted) | One per command, context = addon title | Runs the command through LookupRun macrotext, like every command (see "Command mode") |
-| Addon key bindings (`GetBinding`, `BINDING_NAME_*` tainted) | One per binding | Runs the binding through the override binding on Enter. Blizzard bindings keep "Open key bindings" |
-| Addon Compartment (`AddonCompartmentFrame.registeredAddons`) | One per addon | Calls its `func` as the compartment menu does |
-| LibDataBroker-1.1 (`DataObjectIterator`) | Launchers, data objects with their `text` as value | `OnClick` |
-| AceConfig-3.0 (`IterateOptionsTables`) | `<Addon> options` | `AceConfigDialog:Open(app)`. Toggles inside the tables only if the probe counts justify it |
+| Surface | State | Rows | Enter does |
+|---|---|---|---|
+| Slash commands (`SlashCmdList` and its hidden import table, `SLASH_*1` tainted) | Built | One per command, context = addon title | Runs the command as a macro line, like every command (see "Command mode") |
+| Key bindings (`GetBinding`, `BINDING_NAME_*` tainted) | Built | One per named binding | Addon bindings run through the override binding. `CLICK` and Blizzard bindings open Key Bindings |
+| LibDataBroker-1.1 launchers (`DataObjectIterator`) | Built | One per launcher (category Addon, rank after panels) | `OnClick(frame, "LeftButton")`. The frame is the addon's LibDBIcon minimap button, or else an invisible frame where the box was |
+| LibDataBroker data sources | Later | Their `text` as the value | — |
+| Addon Compartment (`AddonCompartmentFrame.registeredAddons`) | Later: only Lookup used it on 2026-11-19 | One per addon | Its `func`, as the compartment menu calls it |
+| AceConfig-3.0 (`IterateOptionsTables`) | Later | `<Addon> options` | `AceConfigDialog:Open(app)`. Toggles inside the tables only if the probe counts justify it |
+
+The owner of a launcher is the addon with the launcher's name, else the addon that set its `OnClick`.
 
 Rejected: scanning `_G` for functions (unknown arguments and side effects). The Encounter Journal does not exist on Forever (checked in game 2026-11-18), so boss loot needs a loot addon.
 
@@ -118,7 +121,7 @@ Rejected: scanning `_G` for functions (unknown arguments and side effects). The 
 
 **Public API, later.** `Lookup.RegisterProvider(id, spec)` after the built-in providers use the same registry. Loot ships as a separate addon (`Lookup_AtlasLoot`) on that API.
 
-**Probe.** `/lookup probe` logs entry counts per surface, so the counts on real addon sets decide what to build next.
+**Probe.** `/lookup probe` logs discovery records per surface (built and not yet built) and entries per provider, so the counts on real addon sets decide what to build next.
 
 ## Combat
 

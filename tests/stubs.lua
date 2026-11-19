@@ -7,6 +7,23 @@ function issecretvalue(v) return v == "SECRET" end
 clock = 0
 function debugprofilestop() return clock end
 
+-- Taint: which addon set a variable, by key (in any table). Unlisted keys are Blizzard's.
+taint = {}
+function issecurevariable(t, k)
+	if k == nil then k = t end
+	local by = taint[k]
+	return by == nil, by
+end
+
+-- Installed addons by folder: { Title =, IconTexture =, IconAtlas = }.
+addons = {}
+C_AddOns = {
+	GetAddOnMetadata = function(folder, field) return addons[folder] and addons[folder][field] end,
+	DoesAddOnExist = function(folder) return addons[folder] ~= nil end,
+}
+
+function strtrim(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end
+
 ---Load addon files into one namespace, as the client does. Logs go to ns.logged.
 return function(files, ns)
 	ns = ns or {}

@@ -31,6 +31,6 @@
     "MACROS",
     "SETTINGS",
     "KEY_BINDINGS",
-    "LookupDB", "STANDARD_TEXT_FONT", "AddonCompartmentFrame"
+    "LookupDB", "STANDARD_TEXT_FONT", "AddonCompartmentFrame", "LookupFrame"
   ]
 }

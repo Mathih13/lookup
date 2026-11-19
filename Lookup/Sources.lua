@@ -3,7 +3,7 @@
 local _, ns = ...
 
 local RANK = {
-	panel = 1, setting = 2, zone = 3, quest = 4, collection = 5, spell = 6, macro = 7,
+	panel = 1, addon = 1.5, setting = 2, zone = 3, quest = 4, collection = 5, spell = 6, macro = 7,
 	item = 8, progress = 9, slash = 10, people = 11,
 }
 local GREEN = "|cff3fd13f"
@@ -148,25 +148,18 @@ ns.provide("settings", RANK.setting, function(add)
 end)
 
 ns.provide("bindings", RANK.setting, function(add)
-	for i = 1, GetNumBindings() do
-		local command, header, key1 = GetBinding(i)
-		local name = command and _G["BINDING_NAME_" .. command]
-		-- CLICK bindings press another addon's secure button (use an item, target): not run from here.
-		local by = name and not command:find("^CLICK ") and ns.addonOf(_G, "BINDING_NAME_" .. command)
-		local headerName = header and _G[header]
-		if by then
+	for _, b in ipairs(ns.discover.bindings()) do
+		local key = "binding:" .. b.command
+		-- Addon bindings run. CLICK bindings press another addon's secure button (use an item,
+		-- target), and Blizzard's include movement: those open Key Bindings instead.
+		if b.title and not b.command:find("^CLICK ") then
 			-- ponytail: a runOnUp binding misses its release (the box closes first); handle it if an addon needs it.
-			add({
-				name = name, cat = "Key binding", sub = type(headerName) == "string" and headerName or by,
-				key = "binding:" .. command, icon = 136243, binding = command, action = "Run",
-			})
-		elseif name then
-			add({
-				name = name, cat = "Key binding", sub = type(headerName) == "string" and headerName or nil,
-				key = "binding:" .. command, icon = 136243, shortcut = command,
-				value = not key1 and "Not bound" or nil, action = "Open key bindings",
-				call = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
-			})
+			add({ name = b.name, cat = "Key binding", sub = b.header or b.title, key = key, icon = 136243,
+				binding = b.command, action = "Run" })
+		else
+			add({ name = b.name, cat = "Key binding", sub = b.header, key = key, icon = 136243, shortcut = b.command,
+				value = not b.bound and "Not bound" or nil, action = "Open key bindings",
+				call = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end })
 		end
 	end
 end)
@@ -432,17 +425,39 @@ end)
 ns.provide("commands", RANK.slash, function(add)
 	-- Every command runs as a macro line, as if typed. Secure ones (/cast) are not in SlashCmdList.
 	-- Typing "/" puts the box in command mode (UI.lua), where Space adds an argument.
-	ns.eachSlash(function(command, by, folder, aliases)
-		local also = #aliases > 0 and "also " .. table.concat(aliases, ", ") or nil
-		local iconFile = folder and C_AddOns.GetAddOnMetadata(folder, "IconTexture")
-		local iconAtlas = folder and not iconFile and C_AddOns.GetAddOnMetadata(folder, "IconAtlas")
+	for _, r in ipairs(ns.discover.slash()) do
+		local also = #r.aliases > 0 and "also " .. table.concat(r.aliases, ", ") or nil
 		add({
-			name = command, cat = "Command", sub = by and (also and by .. " · " .. also or by) or also,
-			key = "slash:" .. command, slash = command, aliases = aliases, addon = by,
-			icon = iconFile or (folder and 136243 or "Interface/Icons/UI_Chat"), atlas = iconAtlas or nil,
-			action = "Run " .. command, line = command,
+			name = r.command, cat = "Command", sub = r.title and (also and r.title .. " · " .. also or r.title) or also,
+			key = "slash:" .. r.command, slash = r.command, aliases = r.aliases, addon = r.title,
+			icon = r.icon or (r.folder and 136243 or "Interface/Icons/UI_Chat"), atlas = r.atlas,
+			action = "Run " .. r.command, line = r.command,
 		})
-	end)
+	end
+end)
+
+-- 10b. Addon launchers (LibDataBroker) ----------------------------------------------
+
+-- Menus anchor to the frame they get. The box is closed by then, so give them the addon's
+-- minimap button, or else this frame where the box was.
+local launcherAnchor
+local function anchorFor(name)
+	local button = ns.discover.minimapButton(name)
+	if button then return button end
+	if not launcherAnchor then
+		launcherAnchor = CreateFrame("Frame", nil, UIParent)
+		launcherAnchor:SetSize(1, 1)
+		launcherAnchor:SetPoint("TOP", LookupFrame, "TOP")
+	end
+	return launcherAnchor
+end
+
+ns.provide("launchers", RANK.addon, function(add)
+	for _, r in ipairs(ns.discover.launchers()) do
+		add({ name = r.label, cat = "Addon", sub = r.title ~= r.label and r.title or nil, key = "ldb:" .. r.name,
+			icon = r.icon or 136243, atlas = r.atlas, action = "Open",
+			call = function() r.onClick(anchorFor(r.name), "LeftButton") end })
+	end
 end)
 
 -- 11. Friends and guild members ----------------------------------------------------
