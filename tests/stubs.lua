@@ -3,6 +3,10 @@
 
 function issecretvalue(v) return v == "SECRET" end
 
+-- A clock tests move by hand: clock = clock + 7.
+clock = 0
+function debugprofilestop() return clock end
+
 ---Load addon files into one namespace, as the client does. Logs go to ns.logged.
 return function(files, ns)
 	ns = ns or {}

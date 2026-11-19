@@ -4,32 +4,6 @@ BINDING_HEADER_LOOKUP = "Lookup"
 BINDING_NAME_LOOKUP_TOGGLE = "Open search"
 local DEFAULT_KEY = "SHIFT-SPACE"
 
--- Sources add entries: ns.sources[#ns.sources + 1] = function(add) add({...}) end
--- An entry: name, cat (label), sub (context), rank (category order), key (history id), icon,
--- atlas or portrait (unit), value or shortcut (a binding command whose key shows at the right),
--- one action kind (see Action.lua), and drag = function that picks the thing up.
-ns.sources = {}
-
-function ns.collect()
-	local out = {}
-	local i
-	local function add(e)
-		if type(e.name) ~= "string" or issecretvalue(e.name) then return end
-		local kind, err = ns.actionKind(e)
-		if kind then
-			out[#out + 1] = e
-		else
-			ns.log("source", i, "dropped", e.name, err)
-		end
-	end
-	for n, source in ipairs(ns.sources) do
-		i = n
-		local ok, err = pcall(source, add)
-		if not ok then ns.log("source", i, "failed:", err) end
-	end
-	return out
-end
-
 ---Title and folder name of the addon that set tbl[key], or nil for Blizzard's own (secure)
 ---values and Lookup's.
 function ns.addonOf(tbl, key)

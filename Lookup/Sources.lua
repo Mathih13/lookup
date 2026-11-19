@@ -1,20 +1,12 @@
--- Entry sources, one per category in docs/design.md. Each runs on every open.
+-- Built-in providers, one per category in docs/design.md (Providers.lua). Each runs on every open.
 -- Each entry sets one action kind (binding, line, call, toggle): see Action.lua.
 local _, ns = ...
-local add -- set by each source call
 
 local RANK = {
 	panel = 1, setting = 2, zone = 3, quest = 4, collection = 5, spell = 6, macro = 7,
 	item = 8, progress = 9, slash = 10, people = 11,
 }
 local GREEN = "|cff3fd13f"
-
-local function src(f)
-	ns.sources[#ns.sources + 1] = function(a)
-		add = a
-		f()
-	end
-end
 
 -- Display name: a global string if it exists, else the binding name without "Toggle ".
 local function label(global, command)
@@ -62,7 +54,7 @@ local PANELS = {
 	{ "MAINMENU_BUTTON", "TOGGLEGAMEMENU", nil, "GameMenu" },
 }
 
-src(function()
+ns.provide("panels", RANK.panel, function(add)
 	local pvpIcon = "Interface/ICONS/INV_SideTab_Honor_" .. (UnitFactionGroup("player") or "Alliance") .. "_c60"
 	for _, p in ipairs(PANELS) do
 		local name = label(p[1], p[2])
@@ -76,17 +68,17 @@ src(function()
 				icon, atlas = nil, "UI-HUD-MicroMenu-" .. icon .. "-Up"
 			end
 			add({
-				name = name, cat = "Panel", rank = RANK.panel, key = "panel:" .. p[2],
+				name = name, cat = "Panel", key = "panel:" .. p[2],
 				icon = icon or 133633, atlas = atlas, portrait = portrait,
 				binding = p[2], button = p[3],
 			})
 		end
 	end
-	add({ name = MACROS or "Macros", cat = "Panel", rank = RANK.panel, key = "panel:macros",
+	add({ name = MACROS or "Macros", cat = "Panel", key = "panel:macros",
 		icon = 136377, line = "/macro" })
-	add({ name = SETTINGS or "Settings", cat = "Panel", rank = RANK.panel, key = "panel:settings",
+	add({ name = SETTINGS or "Settings", cat = "Panel", key = "panel:settings",
 		atlas = "UI-HUD-MicroMenu-GameMenu-Up", call = function() Settings.OpenToCategory() end })
-	add({ name = KEY_BINDINGS or "Key Bindings", cat = "Panel", rank = RANK.panel, key = "panel:keybindings",
+	add({ name = KEY_BINDINGS or "Key Bindings", cat = "Panel", key = "panel:keybindings",
 		atlas = "UI-HUD-MicroMenu-GameMenu-Up",
 		call = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end })
 end)
@@ -95,16 +87,16 @@ end)
 
 
 ---A boolean setting: the row shows a checkbox, Enter flips it and prints the new state.
-local function toggle(name, sub, key, get, set)
+local function toggle(add, name, sub, key, get, set)
 	add({
-		name = name, cat = "Setting", sub = sub, rank = RANK.setting, key = key, icon = 136243,
+		name = name, cat = "Setting", sub = sub, key = key, icon = 136243,
 		toggle = { get = get, set = set },
 		action = function() return get() and "Turn off" or "Turn on" end,
 	})
 end
 
 local foundDamageMeter
-local function addSetting(category, path, initializer)
+local function addSetting(add, category, path, initializer)
 	local setting = initializer.GetSetting and initializer:GetSetting()
 	local name = initializer.GetName and initializer:GetName()
 	if not setting or type(name) ~= "string" or name == "" then return end
@@ -112,50 +104,50 @@ local function addSetting(category, path, initializer)
 	if variable == "damageMeterEnabled" then foundDamageMeter = true end
 	local categoryID = category:GetID()
 	if setting:GetVariableType() == "boolean" then
-		toggle(name, path, "setting:" .. variable,
+		toggle(add, name, path, "setting:" .. variable,
 			function() return setting:GetValue() end,
 			function(v) setting:SetValue(v, true) end)
 	else
 		add({
-			name = name, cat = "Setting", sub = path, rank = RANK.setting, key = "setting:" .. variable,
+			name = name, cat = "Setting", sub = path, key = "setting:" .. variable,
 			icon = 136243, action = "Open settings",
 			call = function() Settings.OpenToCategory(categoryID, name) end,
 		})
 	end
 end
 
-local function walkCategory(category, parentName)
+local function walkCategory(add, category, parentName)
 	local target = category.redirectCategory or category
 	local id = target:GetID()
 	local name = category:GetName()
 	local path = parentName and parentName .. " > " .. name or name
-	add({ name = name, cat = "Settings", sub = parentName, rank = RANK.setting, key = "settings:" .. tostring(id),
+	add({ name = name, cat = "Settings", sub = parentName, key = "settings:" .. tostring(id),
 		icon = 136243, action = "Open settings", call = function() Settings.OpenToCategory(id) end })
 	local layout = SettingsPanel:GetLayout(category)
 	if layout and layout:IsVerticalLayout() then
 		for _, initializer in layout:EnumerateInitializers() do
 			if not initializer:IsSearchIgnoredInLayout(layout) and initializer:ShouldShow() then
-				addSetting(target, path, initializer)
+				addSetting(add, target, path, initializer)
 			end
 		end
 	end
 end
 
-src(function()
+ns.provide("settings", RANK.setting, function(add)
 	foundDamageMeter = false
 	for _, category in ipairs(SettingsPanel:GetAllCategories()) do
-		walkCategory(category)
-		for _, sub in ipairs(category:GetSubcategories()) do walkCategory(sub, category:GetName()) end
+		walkCategory(add, category)
+		for _, sub in ipairs(category:GetSubcategories()) do walkCategory(add, sub, category:GetName()) end
 	end
 	-- ponytail: the damage meter setting registers only on standard realms; keep the CVar reachable.
 	if not foundDamageMeter and C_CVar.GetCVar("damageMeterEnabled") then
-		toggle("Damage Meter", nil, "setting:damageMeterEnabled",
+		toggle(add, "Damage Meter", nil, "setting:damageMeterEnabled",
 			function() return C_CVar.GetCVarBool("damageMeterEnabled") end,
 			function(v) C_CVar.SetCVar("damageMeterEnabled", v and "1" or "0") end)
 	end
 end)
 
-src(function()
+ns.provide("bindings", RANK.setting, function(add)
 	for i = 1, GetNumBindings() do
 		local command, header, key1 = GetBinding(i)
 		local name = command and _G["BINDING_NAME_" .. command]
@@ -166,12 +158,12 @@ src(function()
 			-- ponytail: a runOnUp binding misses its release (the box closes first); handle it if an addon needs it.
 			add({
 				name = name, cat = "Key binding", sub = type(headerName) == "string" and headerName or by,
-				rank = RANK.setting, key = "binding:" .. command, icon = 136243, binding = command, action = "Run",
+				key = "binding:" .. command, icon = 136243, binding = command, action = "Run",
 			})
 		elseif name then
 			add({
 				name = name, cat = "Key binding", sub = type(headerName) == "string" and headerName or nil,
-				rank = RANK.setting, key = "binding:" .. command, icon = 136243, shortcut = command,
+				key = "binding:" .. command, icon = 136243, shortcut = command,
 				value = not key1 and "Not bound" or nil, action = "Open key bindings",
 				call = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end,
 			})
@@ -185,7 +177,7 @@ local MAP_KIND = { [Enum.UIMapType.Continent] = "Continent", [Enum.UIMapType.Zon
 	[Enum.UIMapType.Dungeon] = "Dungeon" }
 
 local mapNames = {}
-src(function()
+ns.provide("zones", RANK.zone, function(add)
 	local seen = {}
 	local maps = C_Map.GetMapChildrenInfo(C_Map.GetFallbackWorldMapID(), nil, true) or {}
 	for _, m in ipairs(maps) do mapNames[m.mapID] = m.name end
@@ -198,7 +190,7 @@ src(function()
 			local low, high = C_Map.GetMapLevels(mapID)
 			local levels
 			if low and low > 0 then levels = low == high and "Lvl " .. low or "Lvl " .. low .. "-" .. high end
-			add({ name = m.name, cat = kind, sub = mapNames[m.parentMapID], rank = RANK.zone, key = "zone:" .. mapID,
+			add({ name = m.name, cat = kind, sub = mapNames[m.parentMapID], key = "zone:" .. mapID,
 				icon = 137176, value = levels, action = "Open map",
 				call = function() OpenWorldMap(mapID) end })
 		end
@@ -219,7 +211,7 @@ local function questProgress(questID)
 	return done .. "/" .. #objectives
 end
 
-src(function()
+ns.provide("quests", RANK.quest, function(add)
 	local perMap, header = {}, nil
 	for i = 1, C_QuestLog.GetNumQuestLogEntries() do
 		local q = C_QuestLog.GetInfo(i)
@@ -229,7 +221,7 @@ src(function()
 			local questID = q.questID
 			local sub = paint(GetQuestDifficultyColor(q.level), "Lvl " .. q.level)
 			if header then sub = sub .. " · " .. header end
-			add({ name = q.title, cat = "Quest", sub = sub, rank = RANK.quest, key = "quest:" .. questID,
+			add({ name = q.title, cat = "Quest", sub = sub, key = "quest:" .. questID,
 				atlas = C_QuestLog.IsComplete(questID) and "QuestTurnin" or "Quest-In-Progress-Icon-yellow",
 				value = function() return questProgress(questID) end, action = "Show in quest log",
 				call = function() QuestMapFrame_OpenToQuestDetails(questID) end })
@@ -241,7 +233,7 @@ src(function()
 	for mapID, n in pairs(perMap) do
 		local info = mapNames[mapID] and { name = mapNames[mapID] } or C_Map.GetMapInfo(mapID)
 		if info then
-			add({ name = "Quests in " .. info.name, cat = "Quests", rank = RANK.quest, value = tostring(n),
+			add({ name = "Quests in " .. info.name, cat = "Quests", value = tostring(n),
 				key = "questzone:" .. mapID, icon = 136797, shortcut = "TOGGLEQUESTLOG", action = "Open quest log",
 				call = function() OpenQuestLog(mapID) end })
 		end
@@ -250,11 +242,11 @@ end)
 
 -- 5. Mounts, pets, toys --------------------------------------------------------
 
-src(function()
+ns.provide("collections", RANK.collection, function(add)
 	for _, id in ipairs(C_MountJournal.GetMountIDs()) do
 		local name, spellID, icon, _, _, _, _, _, _, hidden, collected = C_MountJournal.GetMountInfoByID(id)
 		if collected and not hidden then
-			add({ name = name, cat = "Mount", rank = RANK.collection, key = "mount:" .. id, icon = icon,
+			add({ name = name, cat = "Mount", key = "mount:" .. id, icon = icon,
 				action = "Show in mount journal",
 				call = function()
 					SetCollectionsJournalShown(true, COLLECTIONS_JOURNAL_TAB_INDEX_MOUNTS)
@@ -267,7 +259,7 @@ src(function()
 		local petID, _, owned, customName, level, _, _, speciesName, icon = C_PetJournal.GetPetInfoByIndex(i)
 		if petID and owned then
 			add({ name = customName or speciesName, cat = "Pet", sub = customName and speciesName or nil,
-				rank = RANK.collection, key = "pet:" .. petID, icon = icon,
+				key = "pet:" .. petID, icon = icon,
 				value = level and "Lvl " .. level or nil, action = "Show in pet journal",
 				call = function()
 					SetCollectionsJournalShown(true, COLLECTIONS_JOURNAL_TAB_INDEX_PETS)
@@ -281,7 +273,7 @@ src(function()
 		if itemID and itemID > 0 and PlayerHasToy(itemID) then
 			local _, name, icon = C_ToyBox.GetToyInfo(itemID)
 			if name then
-				add({ name = name, cat = "Toy", rank = RANK.collection, key = "toy:" .. itemID, icon = icon,
+				add({ name = name, cat = "Toy", key = "toy:" .. itemID, icon = icon,
 					action = "Show in toy box",
 					call = function() ToggleToyCollection(itemID) end,
 					drag = function() C_ToyBox.PickupToyBoxItem(itemID) end })
@@ -302,7 +294,7 @@ local function spellTab(skillLine)
 	end
 end
 
-src(function()
+ns.provide("spells", RANK.spell, function(add)
 	local bank = Enum.SpellBookSpellBank.Player
 	-- One row per spell name: the highest rank wins.
 	local best, order = {}, {}
@@ -327,7 +319,7 @@ src(function()
 		local s, slot, line = b.s, b.slot, b.line
 		local rankText = s.subName ~= "" and s.subName or nil
 		-- No page jump: GoToSpell from addon code taints the spellbook and the action bars.
-		add({ name = name, cat = s.isPassive and "Passive" or "Spell", sub = b.lineName, rank = RANK.spell,
+		add({ name = name, cat = s.isPassive and "Passive" or "Spell", sub = b.lineName,
 			key = "spell:" .. name, icon = s.iconID, value = rankText, action = "Open spellbook",
 			binding = "TOGGLESPELLBOOK", button = "SpellbookMicroButton",
 			tab = function() return spellTab(line) end,
@@ -338,13 +330,13 @@ end)
 
 -- 7. Macros ------------------------------------------------------------------------
 
-src(function()
+ns.provide("macros", RANK.macro, function(add)
 	local account, character = GetNumMacros()
 	local base = Constants.MacroConsts.MAX_ACCOUNT_MACROS
 	local function addMacro(index, tab, tabIndex)
 		local name, icon = GetMacroInfo(index)
 		if not name then return end
-		add({ name = name, cat = "Macro", sub = tab == 1 and "Account" or "Character", rank = RANK.macro,
+		add({ name = name, cat = "Macro", sub = tab == 1 and "Account" or "Character",
 			key = "macro:" .. name, icon = icon, action = "Open macros",
 			line = "/macro",
 			after = function()
@@ -375,7 +367,7 @@ for _, name in ipairs({ "ContainerFrameCombinedBags", "ContainerFrame1" }) do
 	end
 end
 
-src(function()
+ns.provide("items", RANK.item, function(add)
 	local seen = {}
 	for bag = 0, NUM_TOTAL_EQUIPPED_BAG_SLOTS or 5 do
 		for slot = 1, C_Container.GetContainerNumSlots(bag) do
@@ -384,7 +376,7 @@ src(function()
 			if name and not seen[info.itemID] then
 				seen[info.itemID] = true
 				local n = C_Item.GetItemCount(info.itemID)
-				add({ name = name, cat = "Item", rank = RANK.item, key = "item:" .. info.itemID,
+				add({ name = name, cat = "Item", key = "item:" .. info.itemID,
 					icon = info.iconFileID, value = n > 1 and "×" .. n or nil, action = "Show in bags",
 					binding = "OPENALLBAGS", button = "MainMenuBarBackpackButton",
 					after = function()
@@ -399,29 +391,35 @@ end)
 
 -- 9. Currencies, reputations, Legacy Challenges ------------------------------------
 
-src(function()
+ns.provide("currencies", RANK.progress, function(add)
 	for i = 1, C_CurrencyInfo.GetCurrencyListSize() do
 		local c = C_CurrencyInfo.GetCurrencyListInfo(i)
 		if c and not c.isHeader and c.name then
-			add({ name = c.name, cat = "Currency", rank = RANK.progress, key = "currency:" .. (c.currencyID or c.name),
+			add({ name = c.name, cat = "Currency", key = "currency:" .. (c.currencyID or c.name),
 				icon = c.iconFileID or CURRENCY_ICON, value = c.quantity and "|cffffffff" .. c.quantity .. "|r",
 				action = "Open currency", binding = "TOGGLECURRENCY", button = "CharacterMicroButton" })
 		end
 	end
+end)
+
+ns.provide("reputations", RANK.progress, function(add)
 	for i = 1, C_Reputation.GetNumFactions() do
 		local f = C_Reputation.GetFactionDataByIndex(i)
 		if f and f.name and (not f.isHeader or f.isHeaderWithRep) then
 			local standing = f.reaction and _G["FACTION_STANDING_LABEL" .. f.reaction]
-			add({ name = f.name, cat = "Reputation", rank = RANK.progress, key = "rep:" .. f.factionID,
+			add({ name = f.name, cat = "Reputation", key = "rep:" .. f.factionID,
 				icon = REP_ICON, value = type(standing) == "string" and paint(FACTION_BAR_COLORS[f.reaction], standing) or nil,
 				action = "Open reputation", binding = "TOGGLECHARACTER2", button = "CharacterMicroButton" })
 		end
 	end
+end)
+
+ns.provide("legacy", RANK.progress, function(add)
 	for _, category in ipairs(GetCategoryList() or {}) do
 		for i = 1, GetCategoryNumAchievements(category) do
 			local id, name, _, completed, _, _, _, _, _, icon = GetAchievementInfo(category, i)
 			if id then
-				add({ name = name, cat = "Legacy Challenge", rank = RANK.progress, key = "ach:" .. id, icon = icon,
+				add({ name = name, cat = "Legacy Challenge", key = "ach:" .. id, icon = icon,
 					value = completed and GREEN .. "Complete|r" or nil, action = "Open Legacy Challenges",
 					binding = "TOGGLELEGACYSYSTEM", button = "LegacyMicroButton" })
 			end
@@ -431,7 +429,7 @@ end)
 
 -- 10. Slash commands ---------------------------------------------------------------
 
-src(function()
+ns.provide("commands", RANK.slash, function(add)
 	-- Every command runs as a macro line, as if typed. Secure ones (/cast) are not in SlashCmdList.
 	-- Typing "/" puts the box in command mode (UI.lua), where Space adds an argument.
 	ns.eachSlash(function(command, by, folder, aliases)
@@ -440,7 +438,7 @@ src(function()
 		local iconAtlas = folder and not iconFile and C_AddOns.GetAddOnMetadata(folder, "IconAtlas")
 		add({
 			name = command, cat = "Command", sub = by and (also and by .. " · " .. also or by) or also,
-			rank = RANK.slash, key = "slash:" .. command, slash = command, aliases = aliases, addon = by,
+			key = "slash:" .. command, slash = command, aliases = aliases, addon = by,
 			icon = iconFile or (folder and 136243 or "Interface/Icons/UI_Chat"), atlas = iconAtlas or nil,
 			action = "Run " .. command, line = command,
 		})
@@ -469,18 +467,18 @@ local function who(level, className, file, area)
 	return s ~= "" and s or nil
 end
 
-local function whisper(name, key, cat, sub, file, send)
-	add({ name = name, cat = cat, sub = sub, rank = RANK.people, key = key,
+local function whisper(add, name, key, cat, sub, file, send)
+	add({ name = name, cat = cat, sub = sub, key = key,
 		icon = not file and 132200 or nil, atlas = file and "groupfinder-icon-class-" .. file:lower(),
 		action = "Whisper", call = send })
 end
 
-src(function()
+ns.provide("people", RANK.people, function(add)
 	for i = 1, C_FriendList.GetNumFriends() do
 		local f = C_FriendList.GetFriendInfoByIndex(i)
 		if f and f.connected and f.name then
 			local name, file = f.name, classFile(f.className)
-			whisper(name, "friend:" .. name, "Friend", who(f.level, f.className, file, f.area), file,
+			whisper(add, name, "friend:" .. name, "Friend", who(f.level, f.className, file, f.area), file,
 				function() ChatFrameUtil.SendTell(name) end)
 		end
 	end
@@ -488,7 +486,7 @@ src(function()
 		local a = C_BattleNet.GetFriendAccountInfo(i)
 		if a and a.accountName and not issecretvalue(a.accountName) and a.gameAccountInfo.isOnline then
 			local account = a.accountName
-			whisper(account, "bnet:" .. a.battleTag, "Friend", "Battle.net", nil,
+			whisper(add, account, "bnet:" .. a.battleTag, "Friend", "Battle.net", nil,
 				function() ChatFrameUtil.SendBNetTell(account) end)
 		end
 	end
@@ -497,7 +495,7 @@ src(function()
 		for i = 1, GetNumGuildMembers() do
 			local full, _, _, level, className, zone, _, _, online, _, file = GetGuildRosterInfo(i)
 			if full and online then
-				whisper(Ambiguate(full, "guild"), "guild:" .. full, "Guild", who(level, className, file, zone), file,
+				whisper(add, Ambiguate(full, "guild"), "guild:" .. full, "Guild", who(level, className, file, zone), file,
 					function() ChatFrameUtil.SendTell(full) end)
 			end
 		end

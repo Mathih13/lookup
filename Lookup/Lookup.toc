@@ -9,6 +9,7 @@
 Debug.lua
 Match.lua
 Action.lua
+Providers.lua
 Lookup.lua
 Sources.lua
 UI.lua

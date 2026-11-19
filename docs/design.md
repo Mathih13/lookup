@@ -112,9 +112,9 @@ Goal: other addons' features appear with no per-addon code. Decided 2026-11-18 a
 
 Rejected: scanning `_G` for functions (unknown arguments and side effects). The Encounter Journal does not exist on Forever (checked in game 2026-11-18), so boss loot needs a loot addon.
 
-**Providers.** Every source, built-in or discovered, is a provider: `id`, `rank`, `events` that invalidate its cache, `max` entries, `minQuery` letters, `build(add)`. Every entry gives data and one action from the closed set in "Terms"; the Action plan maps it to a proven mechanism. An entry with no action, two actions, or a line with a newline or over 255 characters is dropped and logged. For outside rows, the status line shows the exact macro line.
+**Providers.** Every source, built-in or discovered, is a provider: `ns.provide(id, rank, build)` (`Providers.lua`), and its entries get its rank. Everything rebuilds on each open (about 12 ms for 966 entries on 2026-11-19). Add `events` (cache invalidation), `max` and `minQuery` per provider only when one measures slow, for example loot. Every entry gives data and one action from the closed set in "Terms"; the Action plan maps it to a proven mechanism. An entry with no action, two actions, or a line with a newline or over 255 characters is dropped and logged. For outside rows, the status line shows the exact macro line.
 
-**Isolation.** `build` and `call` run in `pcall`. A provider gets 5 ms and 500 entries. Three failures turn it off for the session, with a log line.
+**Isolation.** `build` and plain steps run in `pcall`. A provider gets 500 entries per open; more are cut, with a log line. Over 5 ms is logged only. A build that throws or gives an invalid action counts as a failure, and three failures turn the provider off for the session.
 
 **Public API, later.** `Lookup.RegisterProvider(id, spec)` after the built-in providers use the same registry. Loot ships as a separate addon (`Lookup_AtlasLoot`) on that API.
 
