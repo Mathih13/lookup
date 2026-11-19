@@ -28,7 +28,19 @@ Never copy EasyFind code (all rights reserved).
 
 ## Look
 
-Minimal dark, slightly translucent box near the top of the screen, at most 8 rows. A row shows an icon, the name, a grey category label, and the key binding for the same thing when one exists. The empty box shows the 5 most recent picks.
+Decided 2026-11-18 after five mock review rounds (v6 mock). The box looks like part of the WoW UI:
+
+- **Frame**: the Midnight dropdown menu background `common-dropdown-bg` (SetAtlas only: the atlas has its own 9-slice data, and explicit slice margins stretch its corners; drawn twice so the scene does not show through, placed as `MenuStyle1Mixin` does), 540 wide, at the top of the screen. All text is in the default UI font (Friz Quadrata), 12 or larger, with a drop shadow. Key names are plain words (`Enter`, `Shift-Enter`): the WoW fonts have no key glyphs.
+- **Stock art only** (chosen 2026-11-18 over five more review rounds with real game art, mock v12): search field `common-search-border-left/middle/right` dimmed to 0.8; selected row `friends-card-quickJoin-selected` (the Quick Join card outline, made for 38px rows), additive; icons in `search-iconframe-large` (achievement search); quests `QuestTurnin` when ready to turn in, `Quest-In-Progress-Icon-yellow` while in progress; divider `UI-TooltipDivider-Transparent` (menu divider); checkbox `checkbox-minimal`. Plain colour only for the caret and the dark icon slot.
+- **Search field**: magnifying glass over the icon column, typed text over the name column, a caret. "8 of 9" at the right when matches do not fit.
+- **Rows**: at most 8, one ranked list, no group headers. A row has an icon in a framed slot, the name (line 1), the category and context (line 2, for example `Spell · Holy`, `Quest · Lvl 22 · Ashenvale`), and one value at the right (rank, objectives `1/3`, standing, count, key, or a checkbox for an on/off setting). Spells show only their highest rank.
+- **Colour**: gold marks the typed letters in the name, and nothing else. Other colours only where WoW uses them: quest difficulty, faction standing, class, `Complete`.
+- **Status line**: at the bottom, what Enter does for the selected row (`Enter: Open spellbook`), and what a drag puts on the bars or `Shift-Enter: keep open` for settings.
+- **Empty box**: the 5 most recent picks under a grey `Recent` label.
+
+## Calculator
+
+A query that is only arithmetic (`1+10`, `(3.5 + 2) * 4`, `2^8`, `10 % 3`, `3x4`) shows the result as the first row. Enter puts the result in the box, so calculations chain. Addons cannot write to the clipboard. The parser is in `Match.lua`; it never runs the text as Lua.
 
 ## Matching and ranking
 
@@ -40,7 +52,7 @@ Minimal dark, slightly translucent box near the top of the screen, at most 8 row
 
 ## Categories
 
-A thing with several actions gets separate rows, for example `Map: Ashenvale` and `Quests in Ashenvale (3)`.
+A thing with several actions gets separate rows, for example `Ashenvale` (Zone) and `Quests in Ashenvale` (Quests, value 3).
 
 | Rank | Category | Enter does |
 |---|---|---|
@@ -53,18 +65,55 @@ A thing with several actions gets separate rows, for example `Map: Ashenvale` an
 | 7 | Macros | Open the macro window on it |
 | 8 | Bag items | Open bags with the item highlighted |
 | 9 | Currencies, reputations, achievements | Open the right tab. Achievements are Forever's Legacy Challenges |
-| 10 | Slash commands | Open chat with the command typed in |
+| 10 | Slash commands | Run the command as a macro line. See "Command mode" |
 | 11 | Friends, guild members | Open a whisper |
 
-**Drag**: spells, items, macros, mounts and toys drag from the row icon. The box closes on drag start. Out of combat only.
+**Drag**: spells, items, macros, mounts, pets and toys drag from the row. The box closes on drag start. Out of combat only.
+
+## Command mode
+
+Decided 2026-11-19 from mock v13.
+
+- A query that starts with `/` lists only slash commands. With only `/` typed, the most used come first, then addon commands, then by name. An exact alias (`/atr`, `/w`) goes first.
+- Rows show the addon's TOC icon (`IconTexture` or `IconAtlas`), the addon title and the aliases.
+- Enter runs the command as it is. Space on a command makes it a grey token in the field, and the rest of the query is its argument.
+- With a token, the rows are the arguments you ran before with that command (`LookupDB.args`), then a last row that runs exactly what you typed. Backspace on an empty argument removes the token.
+- A typed line that matches no command, or that has a space, gets an "As typed" row, so any command still runs.
+- Later: Blizzard commands with known arguments (`/w` and `/invite` take people, `/join` takes channels), and subcommands from AceConfig tables. Learning subcommands from `help` output is optional and runs only on request.
+
+## Other addons
+
+Goal: other addons' features appear with no per-addon code. Decided 2026-11-18 after a review of the discovery surfaces.
+
+**Attribution.** `issecurevariable(table, key)` names the addon that set a value. Lookup uses it to tell addon commands and bindings from Blizzard's, and shows the addon's title as the context.
+
+**Surfaces, in build order:**
+
+| Surface | Rows | Enter does |
+|---|---|---|
+| Addon slash commands (`SlashCmdList` and its hidden import table, `SLASH_*1` tainted) | One per command, context = addon title | Runs the command through LookupRun macrotext, like every command (see "Command mode") |
+| Addon key bindings (`GetBinding`, `BINDING_NAME_*` tainted) | One per binding | Runs the binding through the override binding on Enter. Blizzard bindings keep "Open key bindings" |
+| Addon Compartment (`AddonCompartmentFrame.registeredAddons`) | One per addon | Calls its `func` as the compartment menu does |
+| LibDataBroker-1.1 (`DataObjectIterator`) | Launchers, data objects with their `text` as value | `OnClick` |
+| AceConfig-3.0 (`IterateOptionsTables`) | `<Addon> options` | `AceConfigDialog:Open(app)`. Toggles inside the tables only if the probe counts justify it |
+
+Rejected: scanning `_G` for functions (unknown arguments and side effects). The Encounter Journal does not exist on Forever (checked in game 2026-11-18), so boss loot needs a loot addon.
+
+**Providers.** Every source, built-in or discovered, is a provider: `id`, `rank`, `events` that invalidate its cache, `max` entries, `minQuery` letters, `build(add)`. Outside entries give data and one action from a closed set: `binding`, `slash`, `settings`, `toggle = {get, set}`, `call`. Lookup maps the action to a proven mechanism. Only built-in code sets `secure`, `command` or `tab`.
+
+**Isolation.** `build` and `call` run in `pcall`. A provider gets 5 ms and 500 entries. Three failures turn it off for the session, with a log line.
+
+**Public API, later.** `Lookup.RegisterProvider(id, spec)` after the built-in providers use the same registry. Loot ships as a separate addon (`Lookup_AtlasLoot`) on that API.
+
+**Probe.** `/lookup probe` logs entry counts per surface, so the counts on real addon sets decide what to build next.
 
 ## Combat
 
-The box opens in combat. Results that need a panel show greyed with an "in combat" tag. Results that work in combat (setting toggles, whispers, chat) run.
+The box closes when combat starts and does not open in combat (changed 2026-11-17 after the first in-game test: the secure row makes the box protected, so it could not hide in combat and kept the keyboard).
 
 ## Not in v1
 
-No options page. Later: pins, user aliases, `@category` filters, mount and toy actions, queued combat actions, discovering other addons' settings and commands.
+No options page. Later: pins, user aliases, `@category` filters, mount and toy actions, queued combat actions. Other addons: see "Other addons".
 
 ## Panel-opening architecture
 
@@ -93,4 +142,8 @@ Plain calls are out for panels. Secure rows work.
 - **Two kinds of action:**
   - Secure: macrotext `/click <MicroButton>` or `type="click"` on a tab button. Use for the character frame (and its tabs), the spellbook, and every panel not proven clean.
   - Plain call from the row's click handler: only for calls proven clean in a spike. So far `OpenWorldMap`, `Settings.OpenToCategory`, `ToggleCollectionsJournal`. A new plain call needs the same check: open it, fight, and `make log` shows no `TAINT`, `ADDON_ACTION_BLOCKED` or `ERROR`.
-- **Combat:** attributes and override bindings cannot change, and `SetPropagateKeyboardInput` is restricted. Set propagation back to false on `PLAYER_REGEN_DISABLED`. In combat, Enter runs the selected row's plain action in `OnKeyDown`; panel rows are greyed. Verify this when building v1.
+- **No anchors:** LookupRun sits over the selected row at screen coordinates. Anchoring it to a row made the box protected, and a protected box silently stops `SetPropagateKeyboardInput` from passing Enter on (found 2026-11-17).
+- **Binding commands:** Forever's Character, Collections and Legacy tabs are Frames, so `/click` cannot reach them. Every panel and tab with a Blizzard binding command (`TOGGLECURRENCY`, `TOGGLECHARACTER2`, `TOGGLECOLLECTIONSMOUNTJOURNAL`, ...) opens on Enter through `SetOverrideBinding(owner, true, "ENTER", command)`, which runs Blizzard's binding securely. The mouse falls back to `/click <MicroButton>`, so a click on Currency opens the character frame on its current tab.
+- **Unnamed tab buttons:** a second secure button, `LookupTab`, has `type="click"` and `clickbutton` set to the tab (for example a spellbook school tab). LookupRun's macro runs `/click SpellbookMicroButton` and then `/click LookupTab`. The tab exists only after its panel has loaded once, so the first open falls back to the binding command.
+- **Deep links:** after the secure part, an entry's plain `run` may select inside the open panel (mount, pet, macro, bag search). Each one needs the taint check.
+- **Combat:** anchoring LookupRun over a row makes the box protected. Close the box on `PLAYER_REGEN_DISABLED` (before lockdown) and refuse to open in combat.

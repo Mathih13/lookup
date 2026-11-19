@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="LOOKUP_TOGGLE" category="BINDING_HEADER_LOOKUP">
+		Lookup_Toggle()
+	</Binding>
+</Bindings>

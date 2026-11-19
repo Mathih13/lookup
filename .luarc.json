@@ -21,6 +21,16 @@
     "tests"
   ],
   "diagnostics.globals": [
-    "CharacterFrame"
+    "CharacterFrame",
+    "PlayerSpellsFrame",
+    "SettingsPanel",
+    "PetJournal",
+    "MacroFrame",
+    "UIErrorsFrame",
+    "SEARCH",
+    "MACROS",
+    "SETTINGS",
+    "KEY_BINDINGS",
+    "LookupDB", "STANDARD_TEXT_FONT", "AddonCompartmentFrame"
   ]
 }
