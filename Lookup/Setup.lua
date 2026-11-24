@@ -204,7 +204,6 @@ function ns.showSetup()
 end
 
 function ns.firstRun()
-	LookupDB.bound = nil
 	if LookupDB.setup then return end
 	if GetBindingKey("LOOKUP_TOGGLE") then
 		LookupDB.setup = true
