@@ -80,11 +80,14 @@ ns.provide("panels", RANK.panel, function(add)
 			elseif icon and not icon:find("/") then
 				icon, atlas = nil, "UI-HUD-MicroMenu-" .. icon .. "-Up"
 			end
-			add({
-				name = name, cat = "Panel", key = "panel:" .. p[2],
-				icon = icon or 133633, atlas = atlas, portrait = portrait,
-				binding = p[2], button = p[3],
-			})
+			local e = { name = name, cat = "Panel", key = "panel:" .. p[2],
+				icon = icon or 133633, atlas = atlas, portrait = portrait, binding = p[2], button = p[3] }
+			if p[2] == "TOGGLECURRENCY" and C_CurrencyInfo.GetCurrencyListSize() <= 0 then
+				e.binding, e.button = nil, nil
+				e.value, e.action = "|cff808080None yet|r", "No currencies yet"
+				e.call = function() print("Lookup: this character has no currencies yet.") end
+			end
+			add(e)
 		end
 	end
 	local modeTabs = CharacterFrame and CharacterFrame.ModeTabs
@@ -435,7 +438,13 @@ ns.provide("items", RANK.item, function(add)
 			if name and not seen[info.itemID] then
 				seen[info.itemID] = true
 				local n = C_Item.GetItemCount(info.itemID)
-				add({ name = name, cat = "Item", key = "item:" .. info.itemID,
+				local alt
+				if C_Item.GetItemSpell(info.itemID) then
+					alt = { line = "/use item:" .. info.itemID, action = "Use" }
+				elseif C_Item.IsEquippableItem(info.itemID) then
+					alt = { line = "/equip item:" .. info.itemID, action = "Equip" }
+				end
+				add({ name = name, cat = "Item", key = "item:" .. info.itemID, alt = alt,
 					icon = info.iconFileID, value = n > 1 and "×" .. n or nil, action = "Show in bags",
 					binding = "OPENALLBAGS", button = "MainMenuBarBackpackButton",
 					after = function()

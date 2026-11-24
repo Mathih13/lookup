@@ -15,6 +15,7 @@ The rules and the spike results are in `docs/design.md` "Panel-opening architect
 ## Panels and deep links (`Sources.lua`)
 
 - `inPanel`: when the panel is already open as the box opens, its binding would close it, so the row only selects. Otherwise the binding opens the panel and the select step runs after it. `ns.plan` applies the same rule to tabs: when the tab is visible, the macro clicks only the tab.
+- Currency: on a new character the game's `TOGGLECURRENCY` binding does nothing. While `C_CurrencyInfo.GetCurrencyListSize()` is 0, the Currency row prints a message instead of running the binding.
 - Skills and Statistics: the Reputation binding opens the character frame, then `CharacterFrame:OnModeTabClicked(tab)` selects the tab. Reputation is used, not Character, so the plain step never hides or shows the paper doll, which reads secret values.
 - Legacy pages: the tabs are Frames. A click fires `Legacy.SelectPage` with the tab's id. Lookup finds a tab by its text, so a new tab order does not break the rows.
 - Legacy Challenges: a series shows as one row, so `selectChallenge` selects the step on display (`AchievementFrame_FindDisplayedAchievement`).

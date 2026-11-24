@@ -4,5 +4,5 @@ tests/discovery_test.lua 6
 tests/match_test.lua 12
 tests/providers_test.lua 4
 tests/session_test.lua 25
-tests/setup_test.lua 6
+tests/setup_test.lua 8
 tests/stubs.lua 6

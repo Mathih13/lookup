@@ -36,7 +36,7 @@ Never copy EasyFind code (all rights reserved).
 ## Opening and keys
 
 - Binding `LOOKUP_TOGGLE`, with no fixed default key: the game binds Shift+Space by default. `/lookup` opens the box; `/lookup reset` clears history; `/lookup setup` shows the welcome window again. Addon compartment entry.
-- **First-time setup** (`Setup.lua`): at the first login with no Lookup key, out of combat, a welcome window offers a key. It suggests the first free one of Ctrl+Space, Ctrl+F, Shift+F (`GetBindingAction`), or Ctrl+Space if all are taken, and then names what it replaces. A click on the key captures a new one, as Key Bindings does. "Use this key" binds it, saves, and opens the box. Skip, Esc or the close button: the window does not come back on its own. A player who already has a Lookup key never sees it.
+- **First-time setup** (`Setup.lua`): at the first login with no Lookup key, out of combat and one frame after `PLAYER_ENTERING_WORLD` (its handler closes all windows), a key card opens where the search box opens, in the box's own art. It shows the suggested key as keycaps: the first free one of Ctrl+Space, Ctrl+F, Shift+F (`GetBindingAction`), or Ctrl+Space if all are taken. Pressing the shown key binds it, saves and opens the box. Pressing another combo (with Ctrl, Alt or Shift, or an F key) shows that one instead; plain keys pass through, so the player can still move. A taken key names its current binding and needs a second press. Esc or "Not now": no key, and the card does not come back on its own. A hide by the game (loading screen, combat) does not count. `/lookup setup` shows it again. Chosen over a Blizzard popup and a setup inside the box (prototype on the `prototype/setup-window` branch): it teaches where the box opens and that the key opens it.
 - The box auto-focuses. Up/Down select, Enter runs and closes, Shift+Enter runs and keeps it open, Esc or the binding closes. On a row with an `alt` action (spells), Shift+Enter and a right click run the alt and close. Mouse works.
 - A toggle prints one chat line, for example `Damage Meter: Off`.
 
@@ -77,7 +77,7 @@ A thing with several actions gets separate rows, for example `Ashenvale` (Zone) 
 | 5 | Mounts, pets, toys | Open Collections on it |
 | 6 | Spells | Cast (`/cast <name>`, the highest rank). Shift-Enter: open the spellbook on the school tab. Passives open the spellbook |
 | 7 | Macros | Open the macro window on it |
-| 8 | Bag items | Open bags with the item highlighted |
+| 8 | Bag items | Open bags with the item highlighted. Shift-Enter: `/use item:<id>` for items with a use effect (food, potions, quest items), or `/equip item:<id>` for gear |
 | 9 | Currencies, reputations, achievements | Open the right tab. Achievements are Forever's Legacy Challenges |
 | 10 | Slash commands | Run the command as a macro line. Only in command mode (the query starts with `/`), so they do not crowd a plain search. See "Command mode" |
 | 11 | Friends, guild members | Open a whisper |

@@ -22,4 +22,12 @@ assert(ns.keyConflict("ALT-L", actionOf) == nil)
 bound["ALT-L"] = "LOOKUP_TOGGLE"
 assert(ns.keyConflict("ALT-L", actionOf) == nil)
 
+-- Keycap labels: modifiers in short form, the key as the game names it.
+local text = function(k) return k == "SPACE" and "Spacebar" or k end
+local parts = ns.keyParts("CTRL-SHIFT-SPACE", text)
+assert(parts[1] == "Ctrl" and parts[2] == "Shift" and parts[3] == "Spacebar" and #parts == 3)
+-- Only combos and F keys are choices: plain keys keep moving the character.
+assert(ns.isKeyChoice("CTRL-SPACE") and ns.isKeyChoice("F5") and ns.isKeyChoice("SHIFT-F"))
+assert(not ns.isKeyChoice("W") and not ns.isKeyChoice("SPACE") and not ns.isKeyChoice("F"))
+
 print("ok")

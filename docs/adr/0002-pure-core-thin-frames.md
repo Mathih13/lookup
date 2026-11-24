@@ -1,6 +1,6 @@
 # Pure core, thin frame code
 
-Logic that does not need the client lives in pure files that use no frames: `Match.lua` (matching, ranking, the calculator), `Action.lua` (the Action plan), `Session.lua` (the Query session and Pick memory), and the helpers `ns.suggestKey` and `ns.keyConflict` at the top of `Setup.lua`. `tests/*_test.lua` run them in plain `lua5.1`. `UI.lua` only paints `Session:view()` and runs the Action plan. So most logic is tested without the game, and the frame code that needs the client stays small.
+Logic that does not need the client lives in pure files that use no frames: `Match.lua` (matching, ranking, the calculator), `Action.lua` (the Action plan), `Session.lua` (the Query session and Pick memory), and the helpers `ns.suggestKey`, `ns.keyConflict`, `ns.keyParts` and `ns.isKeyChoice` at the top of `Setup.lua`. `tests/*_test.lua` run them in plain `lua5.1`. `UI.lua` only paints `Session:view()` and runs the Action plan. So most logic is tested without the game, and the frame code that needs the client stays small.
 
 ## Consequences
 

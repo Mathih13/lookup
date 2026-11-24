@@ -17,7 +17,7 @@ A Spotlight-style search box for **WoW Forever**. Press your Lookup key, type a 
 | Mounts, pets and toys | Opens Collections on it |
 | Spells | Casts the spell. **Shift+Enter** opens the spellbook on its tab |
 | Macros | Opens the macro window on it |
-| Bag items | Opens your bags with the item highlighted |
+| Bag items | Opens your bags with the item highlighted. **Shift+Enter** uses it (food, potions) or puts it on (gear) |
 | Currencies and reputations | Opens the right tab |
 | Legacy Challenges | Opens the Legacy panel on that challenge |
 | Slash commands, from Blizzard and from your addons (type `/` first) | Runs the command |
