@@ -110,7 +110,8 @@ do
 end
 local statusLeft = text(status, 12, 0.66, 0.66, 0.66)
 statusLeft:SetPoint("LEFT", 10, 0)
-local statusRight = text(status, 12, 0.66, 0.66, 0.66)
+-- The second hint (Shift-Enter, Space, Drag) is white: it is easy to miss in grey.
+local statusRight = text(status, 12, 1, 1, 1)
 statusRight:SetPoint("RIGHT", -10, 0)
 
 local run = CreateFrame("Button", "LookupRun", UIParent, "SecureActionButtonTemplate")
@@ -179,7 +180,7 @@ local function setStatus(status)
 	else
 		statusLeft:SetText(WHITE .. "Enter:|r " .. status.action)
 	end
-	statusRight:SetText(status.right and WHITE .. status.right[1] .. ":|r " .. status.right[2] or "")
+	statusRight:SetText(status.right and status.right[1] .. ": " .. status.right[2] or "")
 end
 
 for i = 1, MAX_ROWS do
