@@ -193,6 +193,7 @@ function Session:pick(entry)
 		self:update()
 		return true
 	end
+	if not ns.actionKind(entry) then return true end
 	local now = self.now()
 	if entry.argOf then
 		ns.remember(self.db.history, entry.argOf.key, now)
@@ -219,7 +220,11 @@ function Session:view()
 		or query == "" and DEFAULT_HINT or nil
 	local entry = self:selectedEntry()
 	local status
-	if entry then
+	if entry and not ns.actionKind(entry) then
+		local tooLong = entry.line and #entry.line > ns.MACROTEXT_LIMIT
+		status = { message = tooLong and "Too long to run: at most " .. ns.MACROTEXT_LIMIT .. " characters"
+			or "This row cannot run" }
+	elseif entry then
 		local action = entry.action
 		if type(action) == "function" then action = action() end
 		status = { action = action or entry.line and "Run " .. entry.line or "Open" }

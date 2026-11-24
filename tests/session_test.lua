@@ -233,4 +233,16 @@ test("more matches than rows shows the count", function()
 	assert(s:view().count == "8 of 12", s:view().count)
 end)
 
+test("a line too long to run says so, and picking it stores nothing", function()
+	for _, line in ipairs({ "/atr " .. string.rep("a", 260), "/foo " .. string.rep("b", 260) }) do
+		local s, db = fresh()
+		typed(s, line)
+		local v = s:view()
+		local row = v.rows[#v.rows].entry
+		assert(row.cat == "As typed" and v.rows[v.selected].entry == row, names(v))
+		assert(v.status.message == "Too long to run: at most 255 characters", tostring(v.status.message))
+		assert(s:pick(row) == true and next(db.history) == nil and next(db.args) == nil)
+	end
+end)
+
 done()

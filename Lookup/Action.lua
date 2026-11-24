@@ -2,6 +2,7 @@ local _, ns = ...
 
 local KINDS = { "binding", "line", "call", "toggle" }
 local MACROTEXT_LIMIT = 255
+ns.MACROTEXT_LIMIT = MACROTEXT_LIMIT
 
 ---@return string? kind, string? err
 function ns.actionKind(entry)
