@@ -31,6 +31,6 @@
     "MACROS",
     "SETTINGS",
     "KEY_BINDINGS",
-    "LookupDB", "STANDARD_TEXT_FONT", "AddonCompartmentFrame", "LookupFrame", "LegacySystemFrame", "GameTimeFrame"
+    "LookupDB", "STANDARD_TEXT_FONT", "AddonCompartmentFrame", "LookupFrame", "LegacySystemFrame"
   ]
 }

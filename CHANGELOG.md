@@ -1,5 +1,10 @@
 # Lookup
 
+## Unreleased
+
+- Stopwatch and Clock rows. Search "stopwatch" or "clock".
+- An addon's menu opens by the search box when its minimap button is hidden.
+
 ## v0.1.0
 
 The first release.

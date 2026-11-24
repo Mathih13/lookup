@@ -131,10 +131,21 @@ ns.provide("panels", RANK.panel, function(add)
 	end
 	add({ name = MACROS or "Macros", cat = "Panel", key = "panel:macros",
 		icon = 136377, line = "/macro" })
-	-- No binding command for the calendar on Forever: the minimap clock button opens it.
-	if GameTimeFrame then
-		add({ name = type(_G["CALENDAR"]) == "string" and _G["CALENDAR"] or "Calendar", cat = "Panel",
-			key = "panel:calendar", atlas = "ui-hud-calendar-1-up", action = "Open", line = "/click GameTimeFrame" })
+	-- Panels with no binding command on Forever: a secure macro line opens them, as a click on
+	-- their minimap button or the command typed in chat would.
+	local stopwatch = _G["SLASH_STOPWATCH1"]
+	for _, p in ipairs({
+		{ "CALENDAR", "Calendar", _G["GameTimeFrame"] and "/click GameTimeFrame", nil, "ui-hud-calendar-1-up" },
+		{ "STOPWATCH_TITLE", "Stopwatch", type(stopwatch) == "string" and stopwatch,
+			"Interface/Icons/INV_Misc_PocketWatch_01" },
+		{ "TIMEMANAGER_TITLE", "Clock", _G["TimeManagerClockButton"] and "/click TimeManagerClockButton",
+			"Interface/Icons/INV_Misc_PocketWatch_02" },
+	}) do
+		if p[3] then
+			local name = _G[p[1]]
+			add({ name = type(name) == "string" and name or p[2], cat = "Panel", key = "panel:" .. p[2]:lower(),
+				icon = p[4], atlas = p[5], action = "Open", line = p[3] })
+		end
 	end
 	add({ name = SETTINGS or "Settings", cat = "Panel", key = "panel:settings",
 		atlas = "UI-HUD-MicroMenu-GameMenu-Up", call = function() Settings.OpenToCategory() end })
