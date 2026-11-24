@@ -15,6 +15,7 @@ Action.lua
 Providers.lua
 Discovery.lua
 Session.lua
+Setup.lua
 Lookup.lua
 Sources.lua
 UI.lua

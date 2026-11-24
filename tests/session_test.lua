@@ -33,9 +33,17 @@ local db = {}
 local s = ns.newSession(db, now)
 s:open(entries)
 
--- Empty box: nothing picked yet, the search hint, no status line text.
+-- Empty box, nothing picked yet: example searches under "Try", and the search hint.
 local v = s:view()
-assert(#v.rows == 0 and v.header == nil and v.hint:find("^Search"))
+assert(v.header == "Try" and v.rows[1].entry.name == "map" and v.hint:find("^Search"), names(v))
+assert(v.status.action == "Search for map")
+-- Picking an example types it into the box, and is not a pick to remember.
+assert(s:pick(v.rows[1].entry) == true and s:view().query == "map" and next(db.history) == nil)
+s:open(entries)
+-- The "/" example opens command mode.
+s:pick(s:view().rows[4].entry)
+assert(s:view().hint == "Type a command")
+s:open(entries)
 -- The Shift+Space that opened the box is not typed.
 s:type(" ")
 assert(s:view().query == "")
@@ -66,14 +74,18 @@ assert(v.rows[1].entry.calc and v.rows[1].entry.name == "11")
 assert(s:pick(v.rows[1].entry) == true and s:view().query == "11")
 assert(next(db.history) == nil) -- not a pick to remember
 
--- Recent picks show on an empty box, newest first.
+-- After three picks, the empty box shows recent picks, newest first.
 s:open(entries)
 s:pick(entries[1])
 t = t + 1
 s:pick(entries[3])
 s:open(entries)
+assert(s:view().header == "Try") -- two picks: still examples
+t = t + 1
+s:pick(entries[4])
+s:open(entries)
 v = s:view()
-assert(v.header == "Recent" and names(v) == "Seal of Light,Currency", names(v))
+assert(v.header == "Recent" and names(v) == "/who,Seal of Light,Currency", names(v))
 
 -- Command mode: "/" lists only commands, most used first, then addon commands, then by name.
 ns.forget(db)

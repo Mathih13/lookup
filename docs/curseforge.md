@@ -6,11 +6,11 @@ Keep it in step with README.md.
 
 # Summary
 
-Press Shift+Space and type to open any panel, cast a spell, change a setting or run an addon command. For WoW Forever.
+Press one key and type to open any panel, cast a spell, change a setting or run an addon command. For WoW Forever.
 
 # Description
 
-**Lookup** is a search box for WoW Forever. Press **Shift+Space**, type a few letters and press **Enter**. Lookup opens the panel, casts the spell, changes the setting or runs the command, and the box closes.
+**Lookup** is a search box for WoW Forever. Press your Lookup key, type a few letters and press **Enter**. Lookup opens the panel, casts the spell, changes the setting or runs the command, and the box closes.
 
 You no longer need to remember which tab a setting is on, which micro button opens Legacy, or how an addon spells its slash command.
 
@@ -42,7 +42,7 @@ Type a sum such as `1250*3` or `(40+12)/4`. The first row shows the answer.
 
 ## Keys
 
-- **Shift+Space**: open or close the box. Change the key in Key Bindings, under Lookup. `/lookup` also opens it.
+- **Your Lookup key**: open or close the box. On first login, Lookup suggests a free key, such as Ctrl+Space, and you can pick your own. Change it later in Key Bindings, under Lookup, or with `/lookup setup`. `/lookup` and the addon compartment button also open it.
 - **Up / Down**: select a row
 - **Enter**: run the selected row
 - **Shift+Enter**: run the row and keep the box open. On rows with a second action, such as spells, it runs that action. The bottom line of the box always shows what each key does.

@@ -35,7 +35,8 @@ Never copy EasyFind code (all rights reserved).
 
 ## Opening and keys
 
-- Binding `Shift+Space`. On first login, bind it only if the key is unused, and print one line. `/lookup` opens the box; `/lookup reset` clears history. Addon compartment entry.
+- Binding `LOOKUP_TOGGLE`, with no fixed default key: the game binds Shift+Space by default. `/lookup` opens the box; `/lookup reset` clears history; `/lookup setup` shows the welcome window again. Addon compartment entry.
+- **First-time setup** (`Setup.lua`): at the first login with no Lookup key, after 3 s and out of combat, a welcome window offers a key. It suggests the first free one of Ctrl+Space, Ctrl+F, Shift+F (`GetBindingAction`), or Ctrl+Space if all are taken, and then names what it replaces. A click on the key captures a new one, as Key Bindings does. "Use this key" binds it, saves, and opens the box. Skip, Esc or the close button: the window does not come back on its own. A player who already has a Lookup key never sees it.
 - The box auto-focuses. Up/Down select, Enter runs and closes, Shift+Enter runs and keeps it open, Esc or the binding closes. On a row with an `alt` action (spells), Shift+Enter and a right click run the alt and close. Mouse works.
 - A toggle prints one chat line, for example `Damage Meter: Off`.
 
@@ -49,7 +50,7 @@ Decided 2026-11-18 after five mock review rounds (v6 mock). The box looks like p
 - **Rows**: at most 8, one ranked list, no group headers. A row has an icon in a framed slot, the name (line 1), the category and context (line 2, for example `Spell · Holy`, `Quest · Lvl 22 · Ashenvale`), and one value at the right (rank, objectives `1/3`, standing, count, key, or a checkbox for an on/off setting). Spells show only their highest rank.
 - **Colour**: gold marks the typed letters in the name, and nothing else. Other colours only where WoW uses them: quest difficulty, faction standing, class, `Complete`.
 - **Status line**: at the bottom, what Enter does for the selected row (`Enter: Open spellbook`), and what a drag puts on the bars or `Shift-Enter: keep open` for settings.
-- **Empty box**: the 5 most recent picks under a grey `Recent` label.
+- **Empty box**: the 5 most recent picks under a grey `Recent` label. Until there are 3 picks in history, example searches under `Try` instead (map, mount, auto loot, `/`, a sum). Picking one types its text into the box.
 
 ## Calculator
 

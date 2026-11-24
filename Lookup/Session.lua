@@ -7,6 +7,16 @@ local MAX_ROWS, RECENT_ROWS = 8, 5
 local MAX_ARGS = 20 -- remembered arguments per command
 local DEFAULT_HINT = "Search spells, quests, zones, settings..."
 
+-- New players see example searches in the empty box until they have picked this many rows.
+local EXAMPLES_UNTIL = 3
+local EXAMPLES = {
+	{ "map", "Panels and the map", "Interface/Icons/INV_Misc_Map_01" },
+	{ "mount", "Mounts, pets and toys", "Interface/Icons/Ability_Mount_RidingHorse" },
+	{ "auto loot", "Settings that turn on and off", "Interface/Icons/INV_Misc_Gear_01" },
+	{ "/", "Slash commands, also from your addons", "Interface/Icons/UI_Chat", "List commands" },
+	{ "25*4", "Calculator", "Interface/Icons/INV_Misc_Note_01" },
+}
+
 local Session = {}
 Session.__index = Session
 
@@ -39,6 +49,16 @@ local function calcRow(query)
 	if not v then return nil end
 	return { entry = { name = ns.formatNumber(v), cat = "Calculator", sub = query:gsub("|", "||"), rank = 0,
 		icon = "Interface/Icons/INV_Misc_Note_01", calc = true, action = "Use the result", call = function() end } }
+end
+
+-- Example rows: picking one types its text into the box.
+local function exampleRows()
+	local rows = {}
+	for i, x in ipairs(EXAMPLES) do
+		rows[i] = { entry = { name = x[1], cat = "Try", sub = x[2], rank = 0, key = "example:" .. x[1], icon = x[3],
+			example = x[1], action = x[4] or ("Search for " .. x[1]), call = function() end } }
+	end
+	return rows
 end
 
 -- A row that runs the token's command with this argument ("" runs it bare).
@@ -109,12 +129,20 @@ end
 
 function Session:update()
 	local query, total = self.query, nil
+	self.header = nil
 	if self.token then
 		self.rows = self:argRows()
 	elseif query:sub(1, 1) == "/" then
 		self.rows, total = self:commandRows()
 	elseif query == "" then
-		self.rows = wrap(ns.recent(self.entries, self.db.history, RECENT_ROWS))
+		local picks = 0
+		for _ in pairs(self.db.history) do picks = picks + 1 end
+		if picks < EXAMPLES_UNTIL then
+			self.rows, self.header = exampleRows(), "Try"
+		else
+			self.rows = wrap(ns.recent(self.entries, self.db.history, RECENT_ROWS))
+			self.header = #self.rows > 0 and "Recent" or nil
+		end
 	else
 		self.rows, total = ns.rank(self.entries, query, self.db.history, self.now(), MAX_ROWS)
 		local calc = calcRow(query)
@@ -137,7 +165,7 @@ end
 
 ---Typed text. Space after a command name makes it the token (command mode).
 function Session:type(char)
-	if self.query == "" and char == " " then return end -- the Shift+Space that opened the box
+	if self.query == "" and char == " " then return end -- a space from the key that opened the box
 	local picked = self:selectedEntry()
 	if char == " " and not self.token and self.query:sub(1, 1) == "/" and not self.query:find(" ")
 		and picked and picked.slash then
@@ -171,11 +199,11 @@ function Session:selectedEntry()
 	return row and row.entry
 end
 
----Record a pick. Returns true when the box should stay as it is (the calculator puts its
----result in the box instead of running anything).
+---Record a pick. Returns true when the box should stay as it is: the calculator puts its
+---result in the box, and an example row its text, instead of running anything.
 function Session:pick(entry)
-	if entry.calc then
-		self.query, self.selected = entry.name, 1
+	if entry.calc or entry.example then
+		self.query, self.selected = entry.example or entry.name, 1
 		self:update()
 		return true
 	end
@@ -204,7 +232,7 @@ end
 ---What the box shows.
 ---  token: the command text shown grey before the query, or nil
 ---  query, hint (placeholder text or nil), count ("8 of 9" or "")
----  header ("Recent" or nil), rows, selected
+---  header ("Recent", "Try" or nil), rows, selected
 ---  status: { action = text } for the selected row, or { message = text }; right = { key, text } or nil
 function Session:view()
 	local query, token = self.query, self.token
@@ -234,7 +262,7 @@ function Session:view()
 	return {
 		token = token and token.slash, query = query, hint = hint,
 		count = self.total and self.total > #self.rows and (#self.rows .. " of " .. self.total) or "",
-		header = query == "" and not token and #self.rows > 0 and "Recent" or nil,
+		header = self.header,
 		rows = self.rows, selected = self.selected, status = status,
 	}
 end

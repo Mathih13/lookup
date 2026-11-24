@@ -2,7 +2,7 @@
 
 # Lookup
 
-A Spotlight-style search box for **WoW Forever**. Press **Shift+Space**, type a few letters, and press **Enter**. Use it to open a panel, cast a spell, run a command or change a setting without looking through menus.
+A Spotlight-style search box for **WoW Forever**. Press your Lookup key, type a few letters, and press **Enter**. Use it to open a panel, cast a spell, run a command or change a setting without looking through menus.
 
 ## What it finds
 
@@ -27,7 +27,7 @@ Lookup remembers what you pick, so your usual choices come first. An empty box s
 
 ## Keys
 
-- **Shift+Space** opens and closes the box. To change the key, open Key Bindings and look under Lookup. `/lookup` also opens it.
+- **Your Lookup key** opens and closes the box. On first login, Lookup suggests a free key, such as Ctrl+Space, and you can choose another. Change it later in Key Bindings under Lookup, or with `/lookup setup`. `/lookup` and the addon compartment button also open the box.
 - **Up** and **Down** move the selection. **Enter** runs the selected row.
 - **Shift+Enter** runs the row and keeps the box open. On rows with a second action, such as spells, it runs that action instead. The line at the bottom of the box shows what each key does.
 - **Backspace** deletes a character. **Ctrl+Backspace** deletes a word. **Esc** closes the box.
