@@ -1,0 +1,220 @@
+<!doctype html>
+<!--
+PROTOTYPE, throwaway. Question: what should Lookup's first-time key setup look like?
+Three structurally different variants (A key card, B inside the box, C game dialog), stacked.
+Click a scene to focus it, then use the keyboard as in game. Fake bindings: Ctrl+R, Ctrl+M, Alt+Z are taken.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&display=swap" rel="stylesheet">
+<style>
+  :root { --friz: "Friz Quadrata TT", "Marcellus", Georgia, serif; --gold: #ffd100; --gold-dim: #c9a227; }
+  .proto { display: flex; flex-direction: column; gap: 22px; }
+  .label { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; font-family: var(--font-sans); }
+  .label b { font-size: 14px; }
+  .label span { color: var(--muted-foreground); font-size: 12.5px; }
+  .label button { margin-left: auto; font: 12px var(--font-sans); color: var(--muted-foreground); background: none;
+    border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+
+  /* A game screen: world, minimap and action bar, so each variant sits in context. */
+  .scene { position: relative; height: 360px; border-radius: var(--radius); overflow: hidden; outline: none;
+    background:
+      radial-gradient(120% 70% at 30% 100%, #4b5a2a 0%, transparent 60%),
+      radial-gradient(90% 60% at 85% 90%, #5c4a2c 0%, transparent 55%),
+      radial-gradient(80% 50% at 60% 10%, #33452e 0%, transparent 70%),
+      linear-gradient(180deg, #1d2a22 0%, #2f3b25 55%, #3d3a22 100%);
+    font-family: var(--friz); color: #fff; cursor: default; }
+  .scene:focus-visible { box-shadow: 0 0 0 2px var(--ring); }
+  .scene .minimap { position: absolute; top: 12px; right: 14px; width: 78px; height: 78px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 40%, #6b7a4a, #2f3a22); border: 3px solid #8c7440; opacity: .85; }
+  .scene .bar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; opacity: .8; }
+  .scene .bar i { width: 26px; height: 26px; background: #15120c; border: 1px solid #6e5a2c; border-radius: 3px; }
+  .hint { position: absolute; left: 12px; top: 10px; font: 11.5px var(--font-sans); color: #ffffffa0; }
+
+  /* Lookup's own box style (the search box in game). */
+  .lk { position: absolute; left: 50%; transform: translateX(-50%); background: rgba(6,6,9,.93);
+    border: 1px solid #4a4a4a; box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #ffffff10, 0 10px 30px #0008; border-radius: 6px; }
+  .kc { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; height: 40px; padding: 0 12px;
+    border-radius: 7px; background: linear-gradient(#2a2a30, #141418); border: 1px solid #6b5a26;
+    box-shadow: inset 0 -3px 0 #0009, 0 0 0 1px #000; color: #fff; font: 19px var(--friz); }
+  .plus { color: #9a9a9a; margin: 0 8px; font-size: 18px; }
+  .gray { color: #a8a8a8; } .white { color: #fff; } .gold { color: var(--gold); } .warn { color: #ff9933; }
+  .tbtn { background: none; border: 0; font: 13px var(--friz); color: #a8a8a8; cursor: pointer; padding: 0; }
+  .tbtn:hover { color: #fff; }
+
+  /* A: key card */
+  .a { top: 54px; width: 380px; padding: 18px 20px 14px; text-align: center; }
+  .a .title { font-size: 13px; color: var(--gold); letter-spacing: .02em; }
+  .a .keys { margin: 14px 0 12px; display: flex; justify-content: center; align-items: center; min-height: 42px; }
+  .a .say { font-size: 14.5px; line-height: 1.45; }
+  .a .note { font-size: 12.5px; margin-top: 6px; min-height: 18px; }
+  .a .foot { display: flex; justify-content: space-between; margin-top: 14px; padding-top: 10px; border-top: 1px solid #ffffff14; font-size: 12px; }
+
+  /* B: inside the box */
+  .b { top: 40px; width: 470px; padding: 10px; }
+  .field { display: flex; align-items: center; gap: 10px; height: 30px; border: 2px solid #5a5a5a; border-radius: 15px; padding: 0 12px;
+    color: #7a7a7a; font-size: 15px; }
+  .field svg { flex: none; }
+  .head { margin: 10px 0 3px 10px; font-size: 12px; color: #9a9a9a; }
+  .row { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 9px; border: 1px solid transparent; border-radius: 4px; cursor: pointer; }
+  .row.sel { border-color: var(--gold-dim); box-shadow: inset 0 0 12px #c9a22740, 0 0 6px #c9a22760; }
+  .row .slot { width: 28px; height: 28px; background: #08080c; border: 1px solid #3c3c3c; border-radius: 3px; display: grid; place-items: center; font-size: 10px; color: #cfcfcf; }
+  .row .name { font-size: 15px; } .row .sub { font-size: 12px; color: #9a9a9a; } .row .val { margin-left: auto; font-size: 12px; }
+  .status { display: flex; justify-content: space-between; margin-top: 8px; padding: 8px 6px 2px; border-top: 1px solid #ffffff1c; font-size: 12px; color: #a8a8a8; }
+  .status b { color: #fff; font-weight: normal; }
+
+  /* C: Blizzard StaticPopup */
+  .c { top: 70px; width: 400px; padding: 18px 18px 16px; text-align: center; border-radius: 8px;
+    background: rgba(0,0,0,.88); border: 2px solid #8a7234; box-shadow: 0 0 0 1px #000, inset 0 0 0 1px #d4b25c55, 0 10px 30px #0009; }
+  .c p { margin: 0 0 14px; font-size: 14.5px; line-height: 1.5; color: var(--gold); }
+  .c p span { color: #fff; }
+  .c .btns { display: flex; gap: 8px; justify-content: center; }
+  .rbtn { font: 13px var(--friz); color: var(--gold); padding: 5px 14px; min-width: 104px; cursor: pointer; border-radius: 4px;
+    background: linear-gradient(#8a0f0f, #4a0505); border: 1px solid #c9a227; box-shadow: inset 0 1px 0 #ffffff30, 0 0 0 1px #000; }
+  .rbtn:hover { color: #fff; }
+
+  .done { position: absolute; top: 118px; left: 50%; transform: translateX(-50%); font-size: 15px; color: var(--gold); text-shadow: 0 1px 2px #000; }
+</style>
+</head>
+<body>
+<div class="proto">
+
+  <section>
+    <div class="label"><b>A · Key card</b><span>Shows where the box will open. Press the key itself to bind it.</span><button data-reset="a">Reset</button></div>
+    <div class="scene" tabindex="0" id="a"><div class="minimap"></div><div class="bar"></div><div class="hint">Click here, then press Ctrl+Space, or another combo such as Ctrl+R</div></div>
+  </section>
+
+  <section>
+    <div class="label"><b>B · Inside the box</b><span>The search box opens itself once, with keys as rows.</span><button data-reset="b">Reset</button></div>
+    <div class="scene" tabindex="0" id="b"><div class="minimap"></div><div class="bar"></div><div class="hint">Click here, then Up/Down and Enter</div></div>
+  </section>
+
+  <section>
+    <div class="label"><b>C · Game dialog</b><span>Blizzard's own popup. Small and familiar.</span><button data-reset="c">Reset</button></div>
+    <div class="scene" tabindex="0" id="c"><div class="minimap"></div><div class="bar"></div><div class="hint">Click the buttons</div></div>
+  </section>
+</div>
+
+<script>
+const TAKEN = { "Ctrl+R": "the framerate display", "Ctrl+M": "music", "Alt+Z": "hiding the interface" };
+const SUGGEST = ["Ctrl+Space", "Ctrl+F", "Shift+F"];
+const free = k => !TAKEN[k];
+const first = SUGGEST.find(free);
+
+for (const s of document.querySelectorAll(".scene .bar")) s.innerHTML = "<i></i>".repeat(12);
+
+function combo(e) {
+  if (["Control", "Shift", "Alt", "Meta"].includes(e.key)) return null;
+  const k = e.code === "Space" ? "Space" : e.code.startsWith("Key") ? e.code.slice(3)
+    : e.code.startsWith("Digit") ? e.code.slice(5) : /^F\d+$/.test(e.code) ? e.code : e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  return [e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Shift", k].filter(Boolean).join("+");
+}
+const caps = k => k.split("+").map(p => `<span class="kc">${p}</span>`).join('<span class="plus">+</span>');
+const words = k => k.split("+").join(" + ");
+const el = (scene, html) => { scene.querySelector(".ui")?.remove(); scene.insertAdjacentHTML("beforeend", `<div class="ui">${html}</div>`); };
+const MAG = '<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="#bbb" stroke-width="2"/><path d="M10 10l4 4" stroke="#bbb" stroke-width="2.4" stroke-linecap="round"/></svg>';
+
+/* A: key card. Any combo with a modifier, or an F key, is a choice. Plain letters stay free for moving. */
+const A = { key: first, confirm: null, bound: false };
+function drawA() {
+  const s = document.getElementById("a");
+  if (A.bound) return el(s, `<div class="done">Done. ${words(A.key)} opens Lookup.</div>`);
+  const taken = TAKEN[A.key];
+  el(s, `<div class="lk a">
+    <div class="title">Lookup</div>
+    <div class="keys">${caps(A.key)}</div>
+    <div class="say">${taken && A.confirm === A.key
+      ? `Press <span class="white">${words(A.key)}</span> again to use it for Lookup.`
+      : `Press <span class="white">${words(A.key)}</span> to open search.`}</div>
+    <div class="note ${taken ? "warn" : "gray"}">${taken ? `${words(A.key)} is set to ${taken} now.` : "Or press another key to use that one."}</div>
+    <div class="foot"><span class="gray">Change it later in Key Bindings.</span><button class="tbtn" data-a="skip">Not now</button></div>
+  </div>`);
+}
+document.getElementById("a").addEventListener("keydown", e => {
+  if (A.bound) return; const k = combo(e); if (!k) return; e.preventDefault();
+  if (k === "Escape") { A.bound = true; A.key = null; return el(e.currentTarget, `<div class="done">No key. Type /lookup to search.</div>`); }
+  const hasMod = /Ctrl|Alt|Shift/.test(k) || /^F\d+$/.test(k);
+  if (!hasMod) return;
+  if (k === A.key && (free(k) || A.confirm === k)) { A.bound = true; return drawA(); }
+  if (k === A.key && !free(k)) { A.confirm = k; return drawA(); }
+  A.key = k; A.confirm = null; drawA();
+});
+document.getElementById("a").addEventListener("click", e => { if (e.target.dataset.a === "skip") { A.bound = true; el(e.currentTarget, `<div class="done">No key. Type /lookup to search.</div>`); } });
+
+/* B: inside the box. */
+const B = { sel: 0, capture: false, other: null, bound: null };
+function rowsB() {
+  const list = SUGGEST.map(k => ({ k, sub: free(k) ? "Free" : `Set to ${TAKEN[k]} now` }));
+  list.push(B.other ? { k: B.other, sub: free(B.other) ? "Free" : `Set to ${TAKEN[B.other]} now`, other: true }
+                    : { k: null, sub: "Press any combo", other: true });
+  return list;
+}
+function drawB() {
+  const s = document.getElementById("b");
+  if (B.bound) {
+    return el(s, `<div class="lk b">
+      <div class="field">${MAG}<span>Search spells, quests, zones, settings...</span></div>
+      <div class="head">Try</div>
+      ${[["map","Panels and the map"],["mount","Mounts, pets and toys"],["/","Slash commands"]].map((r,i)=>`
+        <div class="row ${i?"":"sel"}"><div class="slot"></div><div><div class="name">${r[0]}</div><div class="sub">Try · ${r[1]}</div></div></div>`).join("")}
+      <div class="status"><span><b>Enter:</b> Search for map</span><span class="gold">${words(B.bound)} opens this box</span></div></div>`);
+  }
+  const list = rowsB(); const cur = list[B.sel];
+  el(s, `<div class="lk b">
+    <div class="field">${MAG}<span>${B.capture ? "Press the keys you want..." : "Choose a key to open this box"}</span></div>
+    <div class="head">Open Lookup with</div>
+    ${list.map((r, i) => `<div class="row ${i === B.sel ? "sel" : ""}" data-i="${i}">
+      <div class="slot">${r.other && !r.k ? "…" : "⌨"}</div>
+      <div class="name">${r.k ? words(r.k) : (B.capture && i === B.sel ? "Press the keys…" : "Another key")}</div>
+      <span class="val ${r.k && !free(r.k) ? "warn" : "gray"}">${r.k ? (free(r.k) ? "Free" : "Replaces " + TAKEN[r.k]) : ""}</span></div>`).join("")}
+    <div class="status"><span><b>Enter:</b> ${cur.k ? "Use " + words(cur.k) : "Choose a key"}</span><span><b>Esc:</b> Not now</span></div></div>`);
+}
+document.getElementById("b").addEventListener("keydown", e => {
+  if (B.bound) return; const list = rowsB();
+  if (B.capture) { const k = combo(e); if (!k) return; e.preventDefault();
+    if (k !== "Escape") B.other = k; B.capture = false; return drawB(); }
+  if (e.key === "ArrowDown") { B.sel = (B.sel + 1) % list.length; e.preventDefault(); }
+  else if (e.key === "ArrowUp") { B.sel = (B.sel + list.length - 1) % list.length; e.preventDefault(); }
+  else if (e.key === "Enter") { const r = list[B.sel]; if (r.other && !r.k) B.capture = true; else B.bound = r.k; }
+  else if (e.key === "Escape") { B.bound = null; return el(e.currentTarget, `<div class="done">No key. Type /lookup to search.</div>`); }
+  else return;
+  drawB();
+});
+document.getElementById("b").addEventListener("click", e => { const r = e.target.closest(".row"); if (r && !B.bound) { B.sel = +r.dataset.i; drawB(); } });
+
+/* C: Blizzard StaticPopup. */
+const C = { key: first, capture: false, done: false };
+function drawC() {
+  const s = document.getElementById("c");
+  if (C.done) return;
+  const taken = TAKEN[C.key];
+  el(s, C.capture
+    ? `<div class="lk c"><p>Press the keys you want to use for Lookup.</p><div class="btns"><button class="rbtn" data-c="cancel">Cancel</button></div></div>`
+    : `<div class="lk c"><p>Lookup has no key yet.<br>Open it with <span>${words(C.key)}</span>?${taken ? `<br><span class="warn">It is set to ${taken} now.</span>` : ""}</p>
+       <div class="btns"><button class="rbtn" data-c="use">Use ${words(C.key)}</button><button class="rbtn" data-c="other">Other key</button><button class="rbtn" data-c="skip">Not now</button></div></div>`);
+}
+document.getElementById("c").addEventListener("click", e => {
+  const a = e.target.dataset.c; if (!a) return; const s = e.currentTarget;
+  if (a === "use") { C.done = true; el(s, `<div class="done">${words(C.key)} opens Lookup.</div>`); }
+  else if (a === "skip") { C.done = true; el(s, `<div class="done">No key. Type /lookup to search.</div>`); }
+  else if (a === "other") { C.capture = true; drawC(); s.focus(); }
+  else if (a === "cancel") { C.capture = false; drawC(); }
+});
+document.getElementById("c").addEventListener("keydown", e => {
+  if (!C.capture) return; const k = combo(e); if (!k) return; e.preventDefault();
+  if (k !== "Escape") C.key = k; C.capture = false; drawC();
+});
+
+document.querySelectorAll("[data-reset]").forEach(b => b.addEventListener("click", () => {
+  const v = b.dataset.reset;
+  if (v === "a") Object.assign(A, { key: first, confirm: null, bound: false }), drawA();
+  if (v === "b") Object.assign(B, { sel: 0, capture: false, other: null, bound: null }), drawB();
+  if (v === "c") Object.assign(C, { key: first, capture: false, done: false }), drawC();
+}));
+drawA(); drawB(); drawC();
+</script>
+</body>
+</html>
