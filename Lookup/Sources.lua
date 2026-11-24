@@ -140,13 +140,13 @@ local function toggle(add, name, sub, key, get, set)
 	})
 end
 
-local foundDamageMeter
+local CVAR_FALLBACKS = { { cvar = "damageMeterEnabled", name = "Damage Meter" } }
+
 local function addSetting(add, category, path, initializer)
 	local setting = initializer.GetSetting and initializer:GetSetting()
 	local name = initializer.GetName and initializer:GetName()
 	if not setting or type(name) ~= "string" or name == "" then return end
 	local variable = setting:GetVariable()
-	if variable == "damageMeterEnabled" then foundDamageMeter = true end
 	local categoryID = category:GetID()
 	if setting:GetVariableType() == "boolean" then
 		toggle(add, name, path, "setting:" .. variable,
@@ -213,15 +213,23 @@ ns.provide("tracking", RANK.setting, function(add)
 end)
 
 ns.provide("settings", RANK.setting, function(add)
-	foundDamageMeter = false
-	for _, category in ipairs(SettingsPanel:GetAllCategories()) do
-		walkCategory(add, category)
-		for _, sub in ipairs(category:GetSubcategories()) do walkCategory(add, sub, category:GetName()) end
+	local added = {}
+	local function addAndNote(e)
+		added[e.key] = true
+		add(e)
 	end
-	if not foundDamageMeter and C_CVar.GetCVar("damageMeterEnabled") then
-		toggle(add, "Damage Meter", nil, "setting:damageMeterEnabled",
-			function() return C_CVar.GetCVarBool("damageMeterEnabled") end,
-			function(v) C_CVar.SetCVar("damageMeterEnabled", v and "1" or "0") end)
+	for _, category in ipairs(SettingsPanel:GetAllCategories()) do
+		walkCategory(addAndNote, category)
+		for _, sub in ipairs(category:GetSubcategories()) do walkCategory(addAndNote, sub, category:GetName()) end
+	end
+	for _, f in ipairs(CVAR_FALLBACKS) do
+		local key = "setting:" .. f.cvar
+		if not added[key] and C_CVar.GetCVar(f.cvar) then
+			ns.log("settings: no Settings entry for", f.cvar, "- using the CVar")
+			toggle(add, f.name, nil, key,
+				function() return C_CVar.GetCVarBool(f.cvar) end,
+				function(v) C_CVar.SetCVar(f.cvar, v and "1" or "0") end)
+		end
 	end
 end)
 

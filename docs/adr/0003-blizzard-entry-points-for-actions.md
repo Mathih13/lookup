@@ -22,6 +22,7 @@ The rules and the spike results are in `docs/design.md` "Panel-opening architect
 - Calendar, Stopwatch, Clock and Edit Mode have no binding command on Forever. A secure macro line opens them, as a click on their minimap button or the typed command would. Edit Mode opens through Blizzard's `/editmode` handler, because `ShowUIPanel` from addon code would taint Edit Mode.
 - Spells: no page jump. `GoToSpell` from addon code taints the spellbook and the action bars.
 - Bag items: the item search filter stays until something clears it, so Lookup clears it when the bags close (the `OnHide` hook on `ContainerFrameCombinedBags` and `ContainerFrame1`).
+- Settings: a CVar in `CVAR_FALLBACKS` gets its own toggle only when the Settings walk found no entry for it. In 2026-11, a comment said the Damage Meter setting registers only on standard realms. Blizzard's Forever source registers it on every realm except Plunderstorm (`AdvancedOptions.lua`). The fallback logs `settings: no Settings entry for` when it fires, so `make log` shows whether Forever still needs it.
 - Minimap tracking uses `MinimapUtil.SetTrackingFilterByFilterIndex` when it exists. It also keeps the Options panel in step for the filters shown there (trivial quests).
 - Key bindings: addon bindings run. `CLICK` bindings press another addon's secure button (use an item, target), and Blizzard's include movement, so those rows open Key Bindings.
 - Slash commands run as macro lines, as if typed. Secure commands (`/cast`) are not in `SlashCmdList`.
