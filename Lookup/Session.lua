@@ -1,6 +1,7 @@
 local _, ns = ...
 
-local MAX_ROWS, RECENT_ROWS = 8, 5
+ns.MAX_ROWS = 8
+local MAX_ROWS, RECENT_ROWS = ns.MAX_ROWS, 5
 local MAX_ARGS = 20
 local DEFAULT_HINT = "Search spells, quests, zones, settings..."
 local LAST_UTF8_CHARACTER = "[\128-\191]*.$"

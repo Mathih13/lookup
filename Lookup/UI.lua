@@ -1,6 +1,5 @@
 local _, ns = ...
 
-local MAX_ROWS = 8
 local WIDTH, GUTTER, TOP, BOTTOM = 540, 12, 10, 8
 local SEARCH_H, HEADER_H, ROW_H, ROW_GAP, STATUS_H = 28, 18, 38, 2, 28
 local ROWS_TOP = TOP + SEARCH_H + 10
@@ -163,7 +162,7 @@ local function setStatus(status)
 	statusRight:SetText(status.right and status.right[1] .. ": " .. status.right[2] or "")
 end
 
-for i = 1, MAX_ROWS do
+for i = 1, ns.MAX_ROWS do
 	local row = CreateFrame("Button", nil, box)
 	row:SetHeight(ROW_H)
 	row.highlight = atlas(row, "BACKGROUND", "friends-card-quickJoin-selected")
