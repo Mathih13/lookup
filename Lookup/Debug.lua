@@ -1,6 +1,14 @@
--- Log saved to SavedVariables (LookupLog) so it can be read from disk after
+-- Development log, saved to SavedVariables (LookupLog) so it can be read from disk after
 -- /reload. Keeps the tail of earlier sessions, so several reloads can be read at once.
+--
+-- Only in development copies: the release packager comments out the debug block below, so
+-- players get a no-op ns.log, no error handler and no saved log.
 local addonName, ns = ...
+
+---@diagnostic disable-next-line: duplicate-set-field
+function ns.log() end
+
+--@debug@
 
 local MAX_ENTRIES = 1000 -- ponytail: keeps the first 1000 lines per session; the first error is usually the root cause
 local KEEP_OLD = 1000 -- lines kept from earlier sessions
@@ -12,6 +20,7 @@ local function str(v)
 end
 
 ---Append one line to the session log. Arguments are joined with spaces.
+---@diagnostic disable-next-line: duplicate-set-field
 function ns.log(...)
 	if count >= MAX_ENTRIES then return end
 	count = count + 1
@@ -58,3 +67,4 @@ frame:SetScript("OnEvent", function(_, event, ...)
 		ns.log(event, ...)
 	end
 end)
+--@end-debug@

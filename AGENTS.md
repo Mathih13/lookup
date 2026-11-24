@@ -16,3 +16,7 @@ Done means: `make check test` passes, and `make log` after a reload shows the ex
 - API signatures: `.tools/vscode-wow-api/Annotations/Core`. The checker also reads Blizzard's Forever Lua source, but not its XML: add XML-defined frames (for example `CharacterFrame`) to `diagnostics.globals` in `.luarc.json`.
 - Real usage: `.tools/wow-ui-source`, Blizzard's UI code for Forever. Search it for how Blizzard calls an API or uses a template before you write new UI code. Its `version.txt` must match the `Version` in the game's `.build.info`; if not, run `make update`.
 - `tests/*_test.lua` run in plain `lua5.1` with stubbed WoW globals. Use them for pure logic.
+
+## Release
+
+A `v*` tag runs `.github/workflows/release.yml`, which builds with the BigWigs packager (`.pkgmeta`) and uploads to CurseForge. Packaged builds comment out `--@debug@` blocks: put code that only serves development (the log, error capture) inside one, and keep a no-op fallback outside it. `make package` builds the same folder locally in `.release/`. Write the release notes in `CHANGELOG.md`.

@@ -1,0 +1,22 @@
+# BigWigs packager (https://github.com/BigWigsMods/packager). The addon lives in Lookup/,
+# so its contents move to the zip root folder and the development files stay out.
+package-as: Lookup
+
+move-folders:
+  Lookup/Lookup: Lookup
+
+ignore:
+  - .claude
+  - .tools
+  - .luarc.json
+  - AGENTS.md
+  - CLAUDE.md
+  - Makefile
+  - README.md
+  - assets
+  - docs
+  - tests
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown

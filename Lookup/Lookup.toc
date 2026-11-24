@@ -1,9 +1,12 @@
 ## Interface: 16001
 ## Title: Lookup
 ## Notes: Spotlight-style search for panels, settings, zones and more.
-## Version: 0.1.0
+## Version: @project-version@
+## Author: Mathih13
+## Category: Quality of Life
+## X-License: MIT
 ## SavedVariables: LookupLog, LookupDB
-## IconTexture: Interface\Icons\INV_Misc_Spyglass_03
+## IconTexture: Interface\AddOns\Lookup\Media\Icon
 ## AddonCompartmentFunc: Lookup_Toggle
 
 Debug.lua

@@ -1,0 +1,23 @@
+# A tag like v0.1.0 builds the release zip and uploads it to CurseForge and GitHub Releases.
+# Tags with "alpha" or "beta" in them upload as alpha or beta files.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the GitHub release
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the packager builds the changelog from history
+
+      - uses: BigWigsMods/packager@v2
