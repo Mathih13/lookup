@@ -520,8 +520,9 @@ end)
 -- minimap button, or else this frame where the box was.
 local launcherAnchor
 local function anchorFor(name)
+	-- A hidden button (the player turned it off) would put the menu off screen.
 	local button = ns.discover.minimapButton(name)
-	if button then return button end
+	if button and button:IsVisible() then return button end
 	if not launcherAnchor then
 		launcherAnchor = CreateFrame("Frame", nil, UIParent)
 		launcherAnchor:SetSize(1, 1)
