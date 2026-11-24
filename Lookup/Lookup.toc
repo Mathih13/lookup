@@ -5,6 +5,7 @@
 ## Author: Mathih13
 ## Category: Quality of Life
 ## X-License: MIT
+## X-Curse-Project-ID: 1828370
 ## SavedVariables: LookupLog, LookupDB
 ## IconTexture: Interface\AddOns\Lookup\Media\Icon
 ## AddonCompartmentFunc: Lookup_Toggle
