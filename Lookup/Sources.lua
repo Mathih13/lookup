@@ -21,28 +21,28 @@ end
 local REP_ICON = "Interface/ICONS/INV_SideTab_Reputation2_c60"
 local CURRENCY_ICON = "Interface/ICONS/INV_SideTab_Currency_c60"
 local PANELS = {
-	{ "CHARACTER_BUTTON", "TOGGLECHARACTER0", "CharacterMicroButton", "portrait" },
-	{ "REPUTATION", "TOGGLECHARACTER2", "CharacterMicroButton", REP_ICON },
-	{ "CURRENCY", "TOGGLECURRENCY", "CharacterMicroButton", CURRENCY_ICON },
-	{ nil, "TOGGLECHARACTER4", "CharacterMicroButton", "pvp" },
-	{ "SPELLBOOK_ABILITIES_BUTTON", "TOGGLESPELLBOOK", "SpellbookMicroButton", "SpellbookAbilities" },
-	{ "PLAYERSPELLS_BUTTON", "TOGGLETALENTS", "TalentMicroButton", "SpecTalents" },
-	{ "PROFESSIONS_BUTTON", "TOGGLEPROFESSIONBOOK", "ProfessionMicroButton", "Professions" },
-	{ "LEGACY_BUTTON", "TOGGLELEGACYSYSTEM", "LegacyMicroButton", "Legacy" },
-	{ "QUESTLOG_BUTTON", "TOGGLEQUESTLOG", "QuestLogMicroButton", "Questlog" },
-	{ "WORLD_MAP", "TOGGLEWORLDMAP", nil, "Questlog" },
-	{ "GUILD_AND_COMMUNITIES", "TOGGLEGUILDTAB", "GuildMicroButton", "GuildCommunities" },
-	{ "DUNGEONS_BUTTON", "TOGGLEGROUPFINDER", "LFDMicroButton", "Groupfinder" },
-	{ "COLLECTIONS", "TOGGLECOLLECTIONS", "CollectionsMicroButton", "Collections" },
-	{ "MOUNTS", "TOGGLECOLLECTIONSMOUNTJOURNAL", "CollectionsMicroButton", "Collections" },
-	{ "PETS", "TOGGLECOLLECTIONSPETJOURNAL", "CollectionsMicroButton", "Collections" },
-	{ "TOYS", "TOGGLECOLLECTIONSTOYBOX", "CollectionsMicroButton", "Collections" },
-	{ "WARDROBE", "TOGGLECOLLECTIONSWARDROBE", "CollectionsMicroButton", "Collections" },
-	{ "FRIENDS", "TOGGLESOCIAL", nil, "GuildCommunities" },
-	{ nil, "TOGGLEWHOTAB", nil, "GuildCommunities" },
-	{ nil, "TOGGLERAIDTAB", nil, "GuildCommunities" },
-	{ "BAGSLOTTEXT", "OPENALLBAGS", "MainMenuBarBackpackButton" },
-	{ "MAINMENU_BUTTON", "TOGGLEGAMEMENU", nil, "GameMenu" },
+	{ global = "CHARACTER_BUTTON", binding = "TOGGLECHARACTER0", button = "CharacterMicroButton", portrait = true },
+	{ global = "REPUTATION", binding = "TOGGLECHARACTER2", button = "CharacterMicroButton", icon = REP_ICON },
+	{ global = "CURRENCY", binding = "TOGGLECURRENCY", button = "CharacterMicroButton", icon = CURRENCY_ICON },
+	{ binding = "TOGGLECHARACTER4", button = "CharacterMicroButton", pvp = true },
+	{ global = "SPELLBOOK_ABILITIES_BUTTON", binding = "TOGGLESPELLBOOK", button = "SpellbookMicroButton", micro = "SpellbookAbilities" },
+	{ global = "PLAYERSPELLS_BUTTON", binding = "TOGGLETALENTS", button = "TalentMicroButton", micro = "SpecTalents" },
+	{ global = "PROFESSIONS_BUTTON", binding = "TOGGLEPROFESSIONBOOK", button = "ProfessionMicroButton", micro = "Professions" },
+	{ global = "LEGACY_BUTTON", binding = "TOGGLELEGACYSYSTEM", button = "LegacyMicroButton", micro = "Legacy" },
+	{ global = "QUESTLOG_BUTTON", binding = "TOGGLEQUESTLOG", button = "QuestLogMicroButton", micro = "Questlog" },
+	{ global = "WORLD_MAP", binding = "TOGGLEWORLDMAP", micro = "Questlog" },
+	{ global = "GUILD_AND_COMMUNITIES", binding = "TOGGLEGUILDTAB", button = "GuildMicroButton", micro = "GuildCommunities" },
+	{ global = "DUNGEONS_BUTTON", binding = "TOGGLEGROUPFINDER", button = "LFDMicroButton", micro = "Groupfinder" },
+	{ global = "COLLECTIONS", binding = "TOGGLECOLLECTIONS", button = "CollectionsMicroButton", micro = "Collections" },
+	{ global = "MOUNTS", binding = "TOGGLECOLLECTIONSMOUNTJOURNAL", button = "CollectionsMicroButton", micro = "Collections" },
+	{ global = "PETS", binding = "TOGGLECOLLECTIONSPETJOURNAL", button = "CollectionsMicroButton", micro = "Collections" },
+	{ global = "TOYS", binding = "TOGGLECOLLECTIONSTOYBOX", button = "CollectionsMicroButton", micro = "Collections" },
+	{ global = "WARDROBE", binding = "TOGGLECOLLECTIONSWARDROBE", button = "CollectionsMicroButton", micro = "Collections" },
+	{ global = "FRIENDS", binding = "TOGGLESOCIAL", micro = "GuildCommunities" },
+	{ binding = "TOGGLEWHOTAB", micro = "GuildCommunities" },
+	{ binding = "TOGGLERAIDTAB", micro = "GuildCommunities" },
+	{ global = "BAGSLOTTEXT", binding = "OPENALLBAGS", button = "MainMenuBarBackpackButton" },
+	{ global = "MAINMENU_BUTTON", binding = "TOGGLEGAMEMENU", micro = "GameMenu" },
 }
 
 local function inPanel(e, open, binding, button, select)
@@ -70,19 +70,12 @@ end
 ns.provide("panels", RANK.panel, function(add)
 	local pvpIcon = "Interface/ICONS/INV_SideTab_Honor_" .. (UnitFactionGroup("player") or "Alliance") .. "_c60"
 	for _, p in ipairs(PANELS) do
-		local name = label(p[1], p[2])
-		if name and _G["BINDING_NAME_" .. p[2]] then
-			local icon, atlas, portrait = p[4] --[[@as string?]], nil, nil
-			if icon == "portrait" then
-				icon, portrait = nil, "player"
-			elseif icon == "pvp" then
-				icon = pvpIcon
-			elseif icon and not icon:find("/") then
-				icon, atlas = nil, "UI-HUD-MicroMenu-" .. icon .. "-Up"
-			end
-			local e = { name = name, cat = "Panel", key = "panel:" .. p[2],
-				icon = icon or 133633, atlas = atlas, portrait = portrait, binding = p[2], button = p[3] }
-			if p[2] == "TOGGLECURRENCY" and C_CurrencyInfo.GetCurrencyListSize() <= 0 then
+		local name = label(p.global, p.binding)
+		if name and _G["BINDING_NAME_" .. p.binding] then
+			local e = { name = name, cat = "Panel", key = "panel:" .. p.binding, binding = p.binding, button = p.button,
+				icon = p.pvp and pvpIcon or p.icon or 133633, portrait = p.portrait and "player" or nil,
+				atlas = p.micro and "UI-HUD-MicroMenu-" .. p.micro .. "-Up" or nil }
+			if p.binding == "TOGGLECURRENCY" and C_CurrencyInfo.GetCurrencyListSize() <= 0 then
 				e.binding, e.button = nil, nil
 				e.value, e.action = "|cff808080None yet|r", "No currencies yet"
 				e.call = function() print("Lookup: this character has no currencies yet.") end
@@ -117,17 +110,19 @@ ns.provide("panels", RANK.panel, function(add)
 		icon = 136377, line = "/macro" })
 	local stopwatch, editMode = _G["SLASH_STOPWATCH1"], _G["SLASH_EDITMODE1"]
 	for _, p in ipairs({
-		{ "CALENDAR", "Calendar", _G["GameTimeFrame"] and "/click GameTimeFrame", nil, "ui-hud-calendar-1-up" },
-		{ "STOPWATCH_TITLE", "Stopwatch", type(stopwatch) == "string" and stopwatch,
-			"Interface/Icons/INV_Misc_PocketWatch_01" },
-		{ "TIMEMANAGER_TITLE", "Clock", _G["TimeManagerClockButton"] and "/click TimeManagerClockButton",
-			"Interface/Icons/INV_Misc_PocketWatch_02" },
-		{ "HUD_EDIT_MODE_MENU", "Edit Mode", type(editMode) == "string" and editMode, "Interface/Icons/INV_Misc_Wrench_01" },
+		{ global = "CALENDAR", name = "Calendar", line = _G["GameTimeFrame"] and "/click GameTimeFrame",
+			atlas = "ui-hud-calendar-1-up" },
+		{ global = "STOPWATCH_TITLE", name = "Stopwatch", line = type(stopwatch) == "string" and stopwatch,
+			icon = "Interface/Icons/INV_Misc_PocketWatch_01" },
+		{ global = "TIMEMANAGER_TITLE", name = "Clock", line = _G["TimeManagerClockButton"] and "/click TimeManagerClockButton",
+			icon = "Interface/Icons/INV_Misc_PocketWatch_02" },
+		{ global = "HUD_EDIT_MODE_MENU", name = "Edit Mode", line = type(editMode) == "string" and editMode,
+			icon = "Interface/Icons/INV_Misc_Wrench_01" },
 	}) do
-		if p[3] then
-			local name = _G[p[1]]
-			add({ name = type(name) == "string" and name or p[2], cat = "Panel", key = "panel:" .. p[2]:lower(),
-				icon = p[4], atlas = p[5], action = "Open", line = p[3] })
+		if p.line then
+			local name = _G[p.global]
+			add({ name = type(name) == "string" and name or p.name, cat = "Panel", key = "panel:" .. p.name:lower(),
+				icon = p.icon, atlas = p.atlas, action = "Open", line = p.line })
 		end
 	end
 	add({ name = SETTINGS or "Settings", cat = "Panel", key = "panel:settings",
