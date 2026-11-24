@@ -26,7 +26,7 @@ Read each file whole before you judge its comments. Put every listed comment in 
 
 When a comment only explains a value or a pattern, give the value a name that says it (`MACROTEXT_LIMIT`, `LAST_UTF8_CHARACTER`). It is then a Tautology.
 
-A comment in `tests/` that names a scenario is a test name, not a Tautology. Leave it for issue #7 (named test cases) unless the scope is that conversion.
+A comment in `tests/` that names a scenario is a test name. Move the scenario into `test("<the name>", function() ... end)` from `tests/stubs.lua`, with its own setup, and delete the comment.
 
 ## 3. Record decisions
 
@@ -45,7 +45,7 @@ For each Excuse, and for each defect a Stale comment hid, run `gh issue create -
 
 ## Done
 
-- `lua5.1 scripts/comments.lua list <scope>` prints nothing, or only the scenario names step 2 left in `tests/`.
+- `lua5.1 scripts/comments.lua list <scope>` prints nothing.
 - Every deleted Decision record is in `docs/design.md` or an ADR, and every Excuse has an issue.
-- `make check test` passes, and `.comments-baseline` has the lower counts.
+- `make check test` passes, and `.comments-baseline` has the lower counts (empty once every file is at 0).
 - Report a table: `path:line`, category, and the action (deleted, ADR file, or issue link). Then give the number of lines removed.

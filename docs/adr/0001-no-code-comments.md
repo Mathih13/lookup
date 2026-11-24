@@ -17,7 +17,7 @@ When code needs a comment to be understood, change the code first: give the valu
 - A count below the baseline also fails until you run `make comments-baseline`, so each deletion stays locked in.
 - `make comments-baseline` never raises a count. Deleting `.comments-baseline` resets it to the current counts, and that shows in review.
 
-The baseline lets the clean-up happen over several changes. On 2026-11-24 `Lookup/` and `scripts/` reached 0. `tests/` keeps its scenario labels until they become named test cases.
+The baseline let the clean-up happen over several changes. `Lookup/` and `scripts/` reached 0 first. `tests/` followed when its scenario labels became named cases (`test(name, fn)` in `tests/stubs.lua`). The baseline is now empty, so every file allows 0.
 
 ## Considered options
 
