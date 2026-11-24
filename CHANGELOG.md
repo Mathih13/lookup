@@ -1,5 +1,9 @@
 # Lookup
 
+## Unreleased
+
+- Bag items: Shift+Enter uses the item (food, potions, quest items) or puts on gear.
+
 ## v0.2.0
 
 - New first-time setup: a key card opens where the search box opens. Press the key it shows to use it, or press another combo to pick that one instead. In v0.1.0 the welcome window could close by itself at login.

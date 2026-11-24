@@ -77,7 +77,7 @@ A thing with several actions gets separate rows, for example `Ashenvale` (Zone) 
 | 5 | Mounts, pets, toys | Open Collections on it |
 | 6 | Spells | Cast (`/cast <name>`, the highest rank). Shift-Enter: open the spellbook on the school tab. Passives open the spellbook |
 | 7 | Macros | Open the macro window on it |
-| 8 | Bag items | Open bags with the item highlighted |
+| 8 | Bag items | Open bags with the item highlighted. Shift-Enter: `/use item:<id>` for items with a use effect (food, potions, quest items), or `/equip item:<id>` for gear |
 | 9 | Currencies, reputations, achievements | Open the right tab. Achievements are Forever's Legacy Challenges |
 | 10 | Slash commands | Run the command as a macro line. Only in command mode (the query starts with `/`), so they do not crowd a plain search. See "Command mode" |
 | 11 | Friends, guild members | Open a whisper |

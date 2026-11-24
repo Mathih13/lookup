@@ -489,7 +489,14 @@ ns.provide("items", RANK.item, function(add)
 			if name and not seen[info.itemID] then
 				seen[info.itemID] = true
 				local n = C_Item.GetItemCount(info.itemID)
-				add({ name = name, cat = "Item", key = "item:" .. info.itemID,
+				-- Shift-Enter: use it (food, potions, quest items) or put it on, as a macro line.
+				local alt
+				if C_Item.GetItemSpell(info.itemID) then
+					alt = { line = "/use item:" .. info.itemID, action = "Use" }
+				elseif C_Item.IsEquippableItem(info.itemID) then
+					alt = { line = "/equip item:" .. info.itemID, action = "Equip" }
+				end
+				add({ name = name, cat = "Item", key = "item:" .. info.itemID, alt = alt,
 					icon = info.iconFileID, value = n > 1 and "×" .. n or nil, action = "Show in bags",
 					binding = "OPENALLBAGS", button = "MainMenuBarBackpackButton",
 					after = function()
