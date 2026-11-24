@@ -113,7 +113,9 @@ local function build()
 	-- Closing it any way counts as done: the window does not come back on its own.
 	f:SetScript("OnHide", function()
 		capture(false)
-		LookupDB.setup = true
+		-- The game hides it too, for example on a loading screen (CloseAllWindows). Only a
+		-- window the player had time to see counts as closed by them.
+		if GetTime() - (f.shownAt or 0) >= 1 then LookupDB.setup = true end
 	end)
 	return f
 end
@@ -127,11 +129,13 @@ function ns.showSetup()
 	window = window or build()
 	chosen = GetBindingKey("LOOKUP_TOGGLE") or ns.suggestKey(GetBindingAction)
 	window.capturing = false
+	window.shownAt = GetTime()
 	window:Show()
 	refresh()
 end
 
----At login: the window, once, for a player with no Lookup key. Out of combat.
+---At login: the window, once, for a player with no Lookup key. Out of combat, and after the
+---game's own PLAYER_ENTERING_WORLD handler, which closes every window (CloseAllWindows).
 function ns.firstRun()
 	LookupDB.bound = nil -- the old auto-bind flag
 	if LookupDB.setup then return end
@@ -140,16 +144,15 @@ function ns.firstRun()
 		return
 	end
 	local wait = CreateFrame("Frame")
-	local function show()
+	wait:RegisterEvent("PLAYER_ENTERING_WORLD")
+	wait:SetScript("OnEvent", function(_, event)
+		wait:UnregisterAllEvents()
 		if InCombatLockdown() then
 			wait:RegisterEvent("PLAYER_REGEN_ENABLED")
-			wait:SetScript("OnEvent", function()
-				wait:UnregisterAllEvents()
-				ns.showSetup()
-			end)
+		elseif event == "PLAYER_ENTERING_WORLD" then
+			C_Timer.After(0, ns.showSetup) -- the next frame: after every handler of this event
 		else
 			ns.showSetup()
 		end
-	end
-	show()
+	end)
 end
