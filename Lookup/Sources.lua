@@ -1,5 +1,3 @@
--- Built-in providers, one per category in docs/design.md (Providers.lua). Each runs on every open.
--- Each entry sets one action kind (binding, line, call, toggle): see Action.lua.
 local _, ns = ...
 
 local RANK = {
@@ -8,7 +6,6 @@ local RANK = {
 }
 local GREEN = "|cff3fd13f"
 
--- Display name: a global string if it exists, else the binding name without "Toggle ".
 local function label(global, command)
 	local s = global and _G[global]
 	if type(s) == "string" then return s end
@@ -16,17 +13,11 @@ local function label(global, command)
 	return s and (s:gsub("^Toggle ", "")) or nil
 end
 
-
----Text in a colour from a Blizzard colour table ({r, g, b}).
 local function paint(c, s)
 	if not c then return s end
 	return ("|cff%02x%02x%02x%s|r"):format(math.floor(c.r * 255), math.floor(c.g * 255), math.floor(c.b * 255), s)
 end
 
--- 1. Panels and tabs -----------------------------------------------------------
-
--- { name global, binding command, mouse fallback button, icon }
--- Icon: a micro menu atlas name, a texture path (the character frame's side tabs), or "portrait".
 local REP_ICON = "Interface/ICONS/INV_SideTab_Reputation2_c60"
 local CURRENCY_ICON = "Interface/ICONS/INV_SideTab_Currency_c60"
 local PANELS = {
@@ -54,9 +45,6 @@ local PANELS = {
 	{ "MAINMENU_BUTTON", "TOGGLEGAMEMENU", nil, "GameMenu" },
 }
 
--- A row for a place inside a panel that its binding toggles. If the panel is already open when
--- the box opens, the binding would close it, so the row only selects. Otherwise the binding opens
--- the panel and select runs after it.
 local function inPanel(e, open, binding, button, select)
 	if open then
 		e.call = select
@@ -66,8 +54,6 @@ local function inPanel(e, open, binding, button, select)
 	return e
 end
 
--- The Legacy frame's pages. Its tabs are Frames: a click fires "Legacy.SelectPage" with the tab's
--- id. Tabs are found by their text, so a new order does not break the rows.
 local LEGACY_PAGES = { "LEGACY_REWARD_TRACK_TAB_TOOLTIP", "LEGACY_CHALLENGE_TAB_TOOLTIP", "LEGACY_TREE_TAB_TOOLTIP" }
 
 local function legacyTab(text)
@@ -85,7 +71,7 @@ ns.provide("panels", RANK.panel, function(add)
 	local pvpIcon = "Interface/ICONS/INV_SideTab_Honor_" .. (UnitFactionGroup("player") or "Alliance") .. "_c60"
 	for _, p in ipairs(PANELS) do
 		local name = label(p[1], p[2])
-		if name and _G["BINDING_NAME_" .. p[2]] then -- the command exists on this client
+		if name and _G["BINDING_NAME_" .. p[2]] then
 			local icon, atlas, portrait = p[4] --[[@as string?]], nil, nil
 			if icon == "portrait" then
 				icon, portrait = nil, "player"
@@ -101,10 +87,6 @@ ns.provide("panels", RANK.panel, function(add)
 			})
 		end
 	end
-	-- Character tabs with no binding command (Skills, Statistics). The tabs are Frames, so no
-	-- binding or /click reaches them. The Reputation binding opens the character frame securely,
-	-- then a plain step selects the tab as a mouse click does. Reputation, not Character: the
-	-- plain step then never hides or shows the paper doll, which reads secret values.
 	local modeTabs = CharacterFrame and CharacterFrame.ModeTabs
 	local characterOpen = CharacterFrame and CharacterFrame:IsShown()
 	for _, key in ipairs({ "SkillsTab", "StatisticsTab" }) do
@@ -116,7 +98,6 @@ ns.provide("panels", RANK.panel, function(add)
 				end))
 		end
 	end
-	-- The Legacy frame loads on first open: until then the icon is the micro menu's.
 	if _G["BINDING_NAME_TOGGLELEGACYSYSTEM"] then
 		local legacyOpen = LegacySystemFrame and LegacySystemFrame:IsShown()
 		for _, global in ipairs(LEGACY_PAGES) do
@@ -131,8 +112,6 @@ ns.provide("panels", RANK.panel, function(add)
 	end
 	add({ name = MACROS or "Macros", cat = "Panel", key = "panel:macros",
 		icon = 136377, line = "/macro" })
-	-- Panels with no binding command on Forever: a secure macro line opens them, as a click on
-	-- their minimap button or the command typed in chat would.
 	local stopwatch, editMode = _G["SLASH_STOPWATCH1"], _G["SLASH_EDITMODE1"]
 	for _, p in ipairs({
 		{ "CALENDAR", "Calendar", _G["GameTimeFrame"] and "/click GameTimeFrame", nil, "ui-hud-calendar-1-up" },
@@ -140,7 +119,6 @@ ns.provide("panels", RANK.panel, function(add)
 			"Interface/Icons/INV_Misc_PocketWatch_01" },
 		{ "TIMEMANAGER_TITLE", "Clock", _G["TimeManagerClockButton"] and "/click TimeManagerClockButton",
 			"Interface/Icons/INV_Misc_PocketWatch_02" },
-		-- Blizzard's /editmode handler opens it. ShowUIPanel from addon code would taint Edit Mode.
 		{ "HUD_EDIT_MODE_MENU", "Edit Mode", type(editMode) == "string" and editMode, "Interface/Icons/INV_Misc_Wrench_01" },
 	}) do
 		if p[3] then
@@ -156,10 +134,6 @@ ns.provide("panels", RANK.panel, function(add)
 		call = function() Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID) end })
 end)
 
--- 2. Settings and key bindings -------------------------------------------------
-
-
----A boolean setting: the row shows a checkbox, Enter flips it and prints the new state.
 local function toggle(add, name, sub, key, get, set)
 	add({
 		name = name, cat = "Setting", sub = sub, key = key, icon = 136243,
@@ -206,8 +180,6 @@ local function walkCategory(add, category, parentName)
 	end
 end
 
--- Minimap tracking (the minimap's tracking menu): each type is an on/off row. Blizzard's helper
--- also keeps the Options panel in step for filters it shows there (trivial quests).
 local function trackingIndex(name)
 	for i = 1, C_Minimap.GetNumTrackingTypes() do
 		local t = C_Minimap.GetTrackingInfo(i)
@@ -248,7 +220,6 @@ ns.provide("settings", RANK.setting, function(add)
 		walkCategory(add, category)
 		for _, sub in ipairs(category:GetSubcategories()) do walkCategory(add, sub, category:GetName()) end
 	end
-	-- ponytail: the damage meter setting registers only on standard realms; keep the CVar reachable.
 	if not foundDamageMeter and C_CVar.GetCVar("damageMeterEnabled") then
 		toggle(add, "Damage Meter", nil, "setting:damageMeterEnabled",
 			function() return C_CVar.GetCVarBool("damageMeterEnabled") end,
@@ -259,10 +230,7 @@ end)
 ns.provide("bindings", RANK.setting, function(add)
 	for _, b in ipairs(ns.discover.bindings()) do
 		local key = "binding:" .. b.command
-		-- Addon bindings run. CLICK bindings press another addon's secure button (use an item,
-		-- target), and Blizzard's include movement: those open Key Bindings instead.
 		if b.title and not b.command:find("^CLICK ") then
-			-- ponytail: a runOnUp binding misses its release (the box closes first); handle it if an addon needs it.
 			add({ name = b.name, cat = "Key binding", sub = b.header or b.title, key = key, icon = 136243,
 				binding = b.command, action = "Run" })
 		else
@@ -272,8 +240,6 @@ ns.provide("bindings", RANK.setting, function(add)
 		end
 	end
 end)
-
--- 3. Zones, cities, dungeons ---------------------------------------------------
 
 local MAP_KIND = { [Enum.UIMapType.Continent] = "Continent", [Enum.UIMapType.Zone] = "Zone",
 	[Enum.UIMapType.Dungeon] = "Dungeon" }
@@ -299,9 +265,6 @@ ns.provide("zones", RANK.zone, function(add)
 	end
 end)
 
--- 4. Quests in the log ---------------------------------------------------------
-
--- "1/3": finished objectives of all, or "Complete".
 local function questProgress(questID)
 	if C_QuestLog.IsComplete(questID) then return GREEN .. "Complete|r" end
 	local objectives = C_QuestLog.GetQuestObjectives(questID) or {}
@@ -341,8 +304,6 @@ ns.provide("quests", RANK.quest, function(add)
 		end
 	end
 end)
-
--- 5. Mounts, pets, toys --------------------------------------------------------
 
 ns.provide("collections", RANK.collection, function(add)
 	for _, id in ipairs(C_MountJournal.GetMountIDs()) do
@@ -384,9 +345,6 @@ ns.provide("collections", RANK.collection, function(add)
 	end
 end)
 
--- 6. Spells ----------------------------------------------------------------------
-
--- The school tab for a skill line. It exists only after the spellbook loaded once.
 local function spellTab(skillLine)
 	local book = PlayerSpellsFrame and PlayerSpellsFrame.SpellBookFrame
 	for _, category in ipairs(book and book.categoryMixins or {}) do
@@ -398,7 +356,6 @@ end
 
 ns.provide("spells", RANK.spell, function(add)
 	local bank = Enum.SpellBookSpellBank.Player
-	-- One row per spell name: the highest rank wins.
 	local best, order = {}, {}
 	for line = 1, C_SpellBook.GetNumSpellBookSkillLines() do
 		local info = C_SpellBook.GetSpellBookSkillLineInfo(line)
@@ -420,7 +377,6 @@ ns.provide("spells", RANK.spell, function(add)
 		local b = best[name]
 		local s, slot, line = b.s, b.slot, b.line
 		local rankText = s.subName ~= "" and s.subName or nil
-		-- No page jump: GoToSpell from addon code taints the spellbook and the action bars.
 		local book = { action = "Open spellbook", binding = "TOGGLESPELLBOOK", button = "SpellbookMicroButton",
 			tab = function() return spellTab(line) end }
 		local e = { name = name, cat = s.isPassive and "Passive" or "Spell", sub = b.lineName,
@@ -430,14 +386,11 @@ ns.provide("spells", RANK.spell, function(add)
 		if s.isPassive then
 			for k, v in pairs(book) do e[k] = v end
 		else
-			-- Enter casts (the highest rank, as on a macro); Shift-Enter opens the book.
 			e.line, e.action, e.alt = "/cast " .. name, "Cast", book
 		end
 		add(e)
 	end
 end)
-
--- 7. Macros ------------------------------------------------------------------------
 
 ns.provide("macros", RANK.macro, function(add)
 	local account, character = GetNumMacros()
@@ -460,9 +413,6 @@ ns.provide("macros", RANK.macro, function(add)
 	for i = 1, character do addMacro(base + i, 2, i) end
 end)
 
--- 8. Bag items ---------------------------------------------------------------------
-
--- The filter we set stays until cleared, so clear it when the bags close.
 local bagSearchSet = false
 for _, name in ipairs({ "ContainerFrameCombinedBags", "ContainerFrame1" }) do
 	local bagFrame = _G[name]
@@ -498,8 +448,6 @@ ns.provide("items", RANK.item, function(add)
 	end
 end)
 
--- 9. Currencies, reputations, Legacy Challenges ------------------------------------
-
 ns.provide("currencies", RANK.progress, function(add)
 	for i = 1, C_CurrencyInfo.GetCurrencyListSize() do
 		local c = C_CurrencyInfo.GetCurrencyListInfo(i)
@@ -523,12 +471,10 @@ ns.provide("reputations", RANK.progress, function(add)
 	end
 end)
 
--- After the binding opened the Legacy frame: its Challenges page, with this challenge selected.
 local function selectChallenge(id)
 	local frame = LegacySystemFrame
 	if not (frame and frame:IsShown()) then return end
 	selectLegacyPage(_G["LEGACY_CHALLENGE_TAB_TOOLTIP"])
-	-- A series shows as one row: select the step on display.
 	local find = AchievementFrame_FindDisplayedAchievement
 	frame:SelectChallenge(find and find(id) or id)
 end
@@ -547,11 +493,7 @@ ns.provide("legacy", RANK.progress, function(add)
 	end
 end)
 
--- 10. Slash commands ---------------------------------------------------------------
-
 ns.provide("commands", RANK.slash, function(add)
-	-- Every command runs as a macro line, as if typed. Secure ones (/cast) are not in SlashCmdList.
-	-- Typing "/" puts the box in command mode (UI.lua), where Space adds an argument.
 	for _, r in ipairs(ns.discover.slash()) do
 		local also = #r.aliases > 0 and "also " .. table.concat(r.aliases, ", ") or nil
 		add({
@@ -563,13 +505,8 @@ ns.provide("commands", RANK.slash, function(add)
 	end
 end)
 
--- 10b. Addon launchers (LibDataBroker) ----------------------------------------------
-
--- Menus anchor to the frame they get. The box is closed by then, so give them the addon's
--- minimap button, or else this frame where the box was.
 local launcherAnchor
 local function anchorFor(name)
-	-- A hidden button (the player turned it off) would put the menu off screen.
 	local button = ns.discover.minimapButton(name)
 	if button and button:IsVisible() then return button end
 	if not launcherAnchor then
@@ -588,9 +525,6 @@ ns.provide("launchers", RANK.addon, function(add)
 	end
 end)
 
--- 11. Friends and guild members ----------------------------------------------------
-
--- Localized class name to class file ("Shaman" -> "SHAMAN"), for class colours and icons.
 local classFiles
 local function classFile(localized)
 	if not classFiles then
@@ -602,7 +536,6 @@ local function classFile(localized)
 	return localized and classFiles[localized]
 end
 
----"34 Shaman · Orgrimmar", with the class in its colour.
 local function who(level, className, file, area)
 	local s = className and paint(file and RAID_CLASS_COLORS[file], className) or ""
 	if level and level > 0 then s = level .. " " .. s end

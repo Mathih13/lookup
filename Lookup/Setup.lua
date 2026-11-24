@@ -1,11 +1,7 @@
--- First-time setup: a welcome window that gives Lookup a key. See docs/design.md "First-time setup".
--- The helpers at the top are pure, for tests. The window is made on first show.
 local _, ns = ...
 
--- Suggested keys, in order. The first one with no binding wins.
 local CANDIDATES = { "CTRL-SPACE", "CTRL-F", "SHIFT-F" }
 
----The first suggested key that nothing uses, or the first one when all are taken.
 ---@param actionOf fun(key: string): string? GetBindingAction
 function ns.suggestKey(actionOf, candidates)
 	candidates = candidates or CANDIDATES
@@ -15,7 +11,6 @@ function ns.suggestKey(actionOf, candidates)
 	return candidates[1]
 end
 
----The name of what a key does now, or nil when it is free or already opens Lookup.
 ---@param actionOf fun(key: string): string? GetBindingAction
 function ns.keyConflict(key, actionOf)
 	local action = actionOf(key) or ""
@@ -24,8 +19,8 @@ function ns.keyConflict(key, actionOf)
 	return type(name) == "string" and name or action
 end
 
-local window -- made on first show
-local chosen -- the key the window offers, as a binding string ("CTRL-SPACE")
+local window
+local chosen
 
 local function refresh()
 	window.key:SetText(window.capturing and "Press a key..." or GetBindingText(chosen))
@@ -58,7 +53,7 @@ local function build()
 	f:SetToplevel(true)
 	f:EnableMouse(true)
 	f.TitleText:SetText("Lookup")
-	tinsert(UISpecialFrames, "LookupSetup") -- Esc closes it
+	tinsert(UISpecialFrames, "LookupSetup")
 
 	local intro = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 	intro:SetPoint("TOP", 0, -40)
@@ -97,7 +92,6 @@ local function build()
 	later:SetPoint("BOTTOM", 0, 14)
 	later:SetText("Later: Key Bindings > Lookup, or /lookup setup")
 
-	-- Capture: the next key with its modifiers, as Key Bindings reads it.
 	f:SetScript("OnKeyDown", function(self, key)
 		self:SetPropagateKeyboardInput(false)
 		if key == "ESCAPE" then
@@ -107,20 +101,15 @@ local function build()
 			capture(false)
 		end
 	end)
-	-- Key capture stops when combat starts.
 	f:RegisterEvent("PLAYER_REGEN_DISABLED")
 	f:SetScript("OnEvent", function() capture(false) end)
-	-- Closing it any way counts as done: the window does not come back on its own.
 	f:SetScript("OnHide", function()
 		capture(false)
-		-- The game hides it too, for example on a loading screen (CloseAllWindows). Only a
-		-- window the player had time to see counts as closed by them.
 		if GetTime() - (f.shownAt or 0) >= 1 then LookupDB.setup = true end
 	end)
 	return f
 end
 
----Show the welcome window. It offers the key Lookup has, or the first free suggestion.
 function ns.showSetup()
 	if InCombatLockdown() then
 		print("Lookup: setup opens after combat.")
@@ -134,10 +123,8 @@ function ns.showSetup()
 	refresh()
 end
 
----At login: the window, once, for a player with no Lookup key. Out of combat, and after the
----game's own PLAYER_ENTERING_WORLD handler, which closes every window (CloseAllWindows).
 function ns.firstRun()
-	LookupDB.bound = nil -- the old auto-bind flag
+	LookupDB.bound = nil
 	if LookupDB.setup then return end
 	if GetBindingKey("LOOKUP_TOGGLE") then
 		LookupDB.setup = true
@@ -150,7 +137,7 @@ function ns.firstRun()
 		if InCombatLockdown() then
 			wait:RegisterEvent("PLAYER_REGEN_ENABLED")
 		elseif event == "PLAYER_ENTERING_WORLD" then
-			C_Timer.After(0, ns.showSetup) -- the next frame: after every handler of this event
+			C_Timer.After(0, ns.showSetup)
 		else
 			ns.showSetup()
 		end

@@ -3,7 +3,6 @@ local addonName, ns = ...
 BINDING_HEADER_LOOKUP = "Lookup"
 BINDING_NAME_LOOKUP_TOGGLE = "Open search"
 
----Open or close the box. Used by the binding, /lookup and the addon compartment.
 function Lookup_Toggle()
 	ns.toggle()
 end
@@ -29,7 +28,7 @@ frame:SetScript("OnEvent", function(_, event, name)
 	if event == "ADDON_LOADED" and name == addonName then
 		LookupDB = LookupDB or {}
 		LookupDB.history = LookupDB.history or {}
-		LookupDB.args = LookupDB.args or {} -- per command: argument text -> {count, last}
+		LookupDB.args = LookupDB.args or {}
 	elseif event == "PLAYER_LOGIN" then
 		ns.log("PLAYER_LOGIN", addonName)
 		ns.firstRun()

@@ -1,0 +1,8 @@
+tests/action_test.lua 10
+tests/debug_test.lua 1
+tests/discovery_test.lua 6
+tests/match_test.lua 12
+tests/providers_test.lua 4
+tests/session_test.lua 25
+tests/setup_test.lua 6
+tests/stubs.lua 6

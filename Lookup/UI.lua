@@ -1,21 +1,14 @@
--- The search box, drawn with stock Blizzard art (mock v12). See docs/design.md "Look" and "Panel-opening architecture".
---
--- The box is a keyboard-enabled frame with no EditBox: OnChar adds text, and only
--- Enter propagates, to an override binding on one secure button (LookupRun).
--- LookupRun sits over the selected row (at screen coordinates, never anchored to
--- it) and holds that row's secure action. The box closes when combat starts and
--- does not open in combat, because LookupRun cannot move or change then.
 local _, ns = ...
 
-local MAX_ROWS = 8 -- must match Session.lua
+local MAX_ROWS = 8
 local WIDTH, GUTTER, TOP, BOTTOM = 540, 12, 10, 8
 local SEARCH_H, HEADER_H, ROW_H, ROW_GAP, STATUS_H = 28, 18, 38, 2, 28
 local ROWS_TOP = TOP + SEARCH_H + 10
-local ICON_X, NAME_X = 9, 47 -- in a row: icon slot, and name column
-local GOLD = "|cffffd100" -- typed matches, and nothing else
+local ICON_X, NAME_X = 9, 47
+local GOLD = "|cffffd100"
 local WHITE = "|cffffffff"
+local QUESTION_MARK_ICON = 134400
 
----A FontString in the default UI font (Friz Quadrata) with the standard drop shadow.
 local function text(parent, size, r, g, b)
 	local fs = parent:CreateFontString(nil, "OVERLAY")
 	fs:SetFont(STANDARD_TEXT_FONT, size, "")
@@ -39,8 +32,6 @@ local function atlas(parent, layer, name, sublevel)
 	return t
 end
 
--- The box: the Midnight dropdown menu background, placed as MenuStyle1Mixin does
--- (10 outside at the sides, 3 at top and bottom).
 local box = CreateFrame("Frame", "LookupFrame", UIParent)
 box:SetSize(WIDTH, ROWS_TOP)
 box:SetPoint("TOP", 0, -140)
@@ -48,17 +39,12 @@ box:SetFrameStrata("FULLSCREEN_DIALOG")
 box:EnableKeyboard(true)
 box:EnableMouse(true)
 box:Hide()
--- Its centre is 95% opaque: two layers keep bright scenes from showing through a box this size.
 for layer = -8, -7 do
-	-- The atlas has its own 9-slice data: SetAtlas only, as MenuStyle1Mixin does.
-	-- Explicit slice margins override it and stretch the corners.
 	local bg = atlas(box, "BACKGROUND", "common-dropdown-bg", layer)
 	bg:SetPoint("TOPLEFT", -10, 3)
 	bg:SetPoint("BOTTOMRIGHT", 10, -3)
 end
 
--- The search field: SearchBoxTemplate's three border pieces, dimmed so the selection is the
--- brightest edge. The magnifying glass sits over the icon column, the text over the names.
 local field = CreateFrame("Frame", nil, box)
 field:SetPoint("TOPLEFT", GUTTER, -TOP)
 field:SetPoint("TOPRIGHT", -GUTTER, -TOP)
@@ -90,13 +76,10 @@ caret:SetSize(2, 17)
 local count = text(field, 12, 0.48, 0.48, 0.48)
 count:SetPoint("RIGHT", -16, 0)
 
--- A section heading: just above the first row, in line with the row icons.
 local recentLabel = text(box, 12, 0.6, 0.6, 0.6)
 recentLabel:SetPoint("BOTTOMLEFT", field, "BOTTOMLEFT", ICON_X, -(ROWS_TOP - TOP - SEARCH_H + HEADER_H - 3))
 recentLabel:SetText("Recent")
 
--- The status line: what Enter does for the selected row, and a second hint, under the
--- menu divider (MenuVariants.CreateDivider).
 local status = CreateFrame("Frame", nil, box)
 status:SetPoint("BOTTOMLEFT", GUTTER, BOTTOM)
 status:SetPoint("BOTTOMRIGHT", -GUTTER, BOTTOM)
@@ -110,26 +93,23 @@ do
 end
 local statusLeft = text(status, 12, 0.66, 0.66, 0.66)
 statusLeft:SetPoint("LEFT", 10, 0)
--- The second hint (Shift-Enter, Space, Drag) is white: it is easy to miss in grey.
 local statusRight = text(status, 12, 1, 1, 1)
 statusRight:SetPoint("RIGHT", -10, 0)
 
 local run = CreateFrame("Button", "LookupRun", UIParent, "SecureActionButtonTemplate")
 run:RegisterForClicks("AnyUp", "AnyDown")
 run:RegisterForDrag("LeftButton")
-run:SetAttribute("useOnKeyDown", false) -- act on release, for keys and mouse alike
+run:SetAttribute("useOnKeyDown", false)
 run:SetFrameStrata("FULLSCREEN_DIALOG")
 run:Hide()
 local bindOwner = CreateFrame("Frame")
 
--- A second step for LookupRun's macro: "/click LookupTab" clicks a tab button that
--- has no global name (entry.tab returns it), for example a spellbook school tab.
 local tab = CreateFrame("Button", "LookupTab", UIParent, "SecureActionButtonTemplate")
 tab:SetAttribute("type", "click")
-tab:SetAttribute("useOnKeyDown", false) -- /click sends only the release
-local armed -- the selected entry's Action plan (Action.lua)
-local armedAlt -- the plan for its alt (Shift-Enter and a right click), or nil
-local session -- the Query session (Session.lua), made on first open: LookupDB loads after this file
+tab:SetAttribute("useOnKeyDown", false)
+local armed
+local armedAlt
+local session
 local rows = {}
 
 local function inCombat() return InCombatLockdown() end
@@ -155,8 +135,8 @@ local function setIcon(row, entry)
 		icon:SetAtlas(entry.atlas)
 		icon:SetSize(20, 20)
 	else
-		icon:SetTexture(entry.icon or 134400) -- question mark
-		icon:SetTexCoord(0.08, 0.92, 0.08, 0.92) -- hide the baked border
+		icon:SetTexture(entry.icon or QUESTION_MARK_ICON)
+		icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
 		icon:SetSize(28, 28)
 	end
 end
@@ -186,13 +166,11 @@ end
 for i = 1, MAX_ROWS do
 	local row = CreateFrame("Button", nil, box)
 	row:SetHeight(ROW_H)
-	-- Selection: the Quick Join card outline (made for 38px rows), additive.
 	row.highlight = atlas(row, "BACKGROUND", "friends-card-quickJoin-selected")
 	row.highlight:SetTextureSliceMargins(6, 6, 6, 6)
 	row.highlight:SetBlendMode("ADD")
 	row.highlight:SetAlpha(0.9)
 	row.highlight:SetAllPoints()
-	-- Icon slot: a dark square in the achievement search icon frame, so atlas icons line up.
 	row.slot = color(row, "BORDER", 0.03, 0.03, 0.05)
 	row.slot:SetSize(28, 28)
 	row.slot:SetPoint("LEFT", ICON_X, 0)
@@ -219,12 +197,10 @@ for i = 1, MAX_ROWS do
 	row.sub:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -2)
 	row.sub:SetPoint("RIGHT", row.value, "LEFT", -24, 0)
 	row:SetScript("OnEnter", function()
-		-- Moving LookupRun by keyboard can put a row under a still cursor: ignore that.
 		local x, y = GetCursorPosition()
 		if x ~= row.cursorX or y ~= row.cursorY then ns.select(i) end
 		row.cursorX, row.cursorY = x, y
 	end)
-	-- LookupRun covers the selected row, so this runs only if it is missing.
 	row:SetScript("OnClick", function()
 		ns.log("row click (LookupRun missing)", row.entry and row.entry.key)
 		ns.activate(row.entry)
@@ -232,7 +208,6 @@ for i = 1, MAX_ROWS do
 	rows[i] = row
 end
 
--- Put the selected entry's action on LookupRun and LookupRun over its row.
 local function arm()
 	if inCombat() then return end
 	local row = rows[session.selected]
@@ -249,7 +224,7 @@ local function arm()
 	local visible = tabButton and tabButton:IsVisible()
 	armed = ns.plan(entry, entry.tab and visible)
 	armedAlt = alt and ns.plan(alt, alt.tab and visible) or nil
-	if not armed then -- not reached: the registry drops entries with invalid actions
+	if not armed then
 		run:Hide()
 		ClearOverrideBindings(bindOwner)
 		return
@@ -257,11 +232,8 @@ local function arm()
 	if armed.clickTab or (armedAlt and armedAlt.clickTab) then tab:SetAttribute("clickbutton", tabButton) end
 	run:SetAttribute("type", armed.macrotext and "macro" or nil)
 	run:SetAttribute("macrotext", armed.macrotext)
-	-- The right button runs the alt. With an alt that has no secure part it does nothing secure;
-	-- with no alt it falls back to "type", like the left button.
 	run:SetAttribute("type2", armedAlt and (armedAlt.macrotext and "macro" or ATTRIBUTE_NOOP) or nil)
 	run:SetAttribute("macrotext2", armedAlt and armedAlt.macrotext)
-	-- Screen coordinates, no anchor to the row: an anchor would make the box protected.
 	run:ClearAllPoints()
 	run:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", row:GetLeft(), row:GetTop())
 	run:SetSize(row:GetWidth(), row:GetHeight())
@@ -269,7 +241,7 @@ local function arm()
 	run:Show()
 	local function bind(key, plan, mouseButton)
 		if plan.enter == "binding" then
-			SetOverrideBinding(bindOwner, true, key, plan.command) -- Blizzard's binding runs it securely
+			SetOverrideBinding(bindOwner, true, key, plan.command)
 		else
 			SetOverrideBindingClick(bindOwner, true, key, "LookupRun", mouseButton)
 		end
@@ -294,7 +266,6 @@ function ns.select(i)
 	arm()
 end
 
--- Paint the session's view.
 local function refresh()
 	local view = session:view()
 	local shown = view.query:gsub("|", "||")
@@ -333,17 +304,13 @@ function ns.close()
 	box:Hide()
 end
 
----Record the pick, close, then run the plan's plain step. Called after the secure
----part (LookupRun click or binding command), or alone when there is none.
----useAlt: Shift-Enter or a right click ran the entry's alt.
 function ns.activate(entry, useAlt)
 	if not entry then return end
-	if session:pick(entry) then -- the calculator: its result is now the query
+	if session:pick(entry) then
 		refresh()
 		return
 	end
 	ns.log("activate", entry.key)
-	-- Shift keeps the box open, unless Shift picks the alt.
 	local keep = IsShiftKeyDown() and not entry.alt
 	if not keep then ns.close() end
 	local plan = ns.plan(useAlt and entry.alt or entry)
@@ -365,11 +332,8 @@ run:SetScript("OnDragStart", function()
 	end
 end)
 
--- The key that opened the box can also send its character (Shift+F types "F"). Characters
--- count only after the box has seen a key press of its own.
 local fresh = false
 
----Whether a key press, with its modifiers, is one of the keys bound to Lookup.
 local function isLookupKey(key)
 	if IsKeyPressIgnoredForBinding(key) then return false end
 	local chord = CreateKeyChordStringUsingMetaKeyState(key)
@@ -389,16 +353,16 @@ box:SetScript("OnKeyDown", function(self, key)
 	fresh = false
 	local propagate = false
 	if isLookupKey(key) then
-		ns.close() -- the box takes every key, so its own binding never runs
+		ns.close()
 	elseif key == "ENTER" then
 		local entry = session:selectedEntry()
 		local useAlt = IsShiftKeyDown() and armedAlt ~= nil
 		local plan = useAlt and armedAlt or armed
 		if entry and plan and plan.enter == "binding" then
-			propagate = true -- the override binding runs the command
+			propagate = true
 			C_Timer.After(0, function() ns.activate(entry, useAlt) end)
 		elseif entry and plan and plan.enter == "click" then
-			propagate = true -- the override binding clicks LookupRun
+			propagate = true
 		else
 			ns.activate(entry, useAlt)
 		end
@@ -418,7 +382,6 @@ box:SetScript("OnKeyDown", function(self, key)
 end)
 
 box:SetScript("OnHide", disarm)
--- Fires just before lockdown starts, while hiding is still allowed.
 box:RegisterEvent("PLAYER_REGEN_DISABLED")
 box:SetScript("OnEvent", ns.close)
 
