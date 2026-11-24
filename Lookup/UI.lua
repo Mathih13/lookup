@@ -249,9 +249,26 @@ local function arm()
 	bind("SHIFT-ENTER", armedAlt or armed, armedAlt and "RightButton" or "LeftButton")
 end
 
+local holdBindingUntilRelease = false
+local release = CreateFrame("Frame")
+release:Hide()
+release:SetScript("OnUpdate", function(self)
+	if IsKeyDown("ENTER") then return end
+	self:Hide()
+	if not box:IsShown() and not inCombat() then
+		ClearOverrideBindings(bindOwner)
+		ns.log("binding released with Enter")
+	end
+end)
+
 local function disarm()
 	if inCombat() then return end
-	ClearOverrideBindings(bindOwner)
+	if holdBindingUntilRelease and IsKeyDown("ENTER") then
+		release:Show()
+	else
+		ClearOverrideBindings(bindOwner)
+	end
+	holdBindingUntilRelease = false
 	run:ClearAllPoints()
 	run:Hide()
 end
@@ -359,6 +376,7 @@ box:SetScript("OnKeyDown", function(self, key)
 		local plan = useAlt and armedAlt or armed
 		if entry and plan and plan.enter == "binding" then
 			propagate = true
+			holdBindingUntilRelease = true
 			C_Timer.After(0, function() ns.activate(entry, useAlt) end)
 		elseif entry and plan and plan.enter == "click" then
 			propagate = true
@@ -382,7 +400,11 @@ end)
 
 box:SetScript("OnHide", disarm)
 box:RegisterEvent("PLAYER_REGEN_DISABLED")
-box:SetScript("OnEvent", ns.close)
+box:SetScript("OnEvent", function()
+	holdBindingUntilRelease = false
+	release:Hide()
+	ns.close()
+end)
 
 function ns.toggle()
 	if box:IsShown() then

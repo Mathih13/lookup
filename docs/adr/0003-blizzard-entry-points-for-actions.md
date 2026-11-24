@@ -9,6 +9,7 @@ The rules and the spike results are in `docs/design.md` "Panel-opening architect
 - The right button runs the `alt` (`type2`). An alt with no secure part sets `ATTRIBUTE_NOOP`. With no alt, the right button falls back to `type`, like the left button.
 - For a `binding` plan, Enter goes to `SetOverrideBinding(owner, true, "ENTER", command)`: Blizzard's binding runs the command securely.
 - Enter propagates only when the override binding must fire: for a `binding` plan or a `click` plan. `ns.activate` then runs the plain `after` step. For a binding it runs on the next frame (`C_Timer.After(0)`), after the binding.
+- After a `binding` plan, `disarm` keeps the override binding until Enter is up (`IsKeyDown("ENTER")`, the `release` frame). A binding declared with `runOnUp` then gets its release, and no API tells Lookup which bindings have it. Combat start clears the binding at once.
 - A row's own `OnClick` runs only when `LookupRun` is missing. It logs that case.
 - The box closes on `PLAYER_REGEN_DISABLED`. That event fires just before lockdown, while hiding is still allowed.
 
