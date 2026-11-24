@@ -94,11 +94,15 @@ ns.provide("panels", RANK.panel, function(add)
 			elseif icon and not icon:find("/") then
 				icon, atlas = nil, "UI-HUD-MicroMenu-" .. icon .. "-Up"
 			end
-			add({
-				name = name, cat = "Panel", key = "panel:" .. p[2],
-				icon = icon or 133633, atlas = atlas, portrait = portrait,
-				binding = p[2], button = p[3],
-			})
+			local e = { name = name, cat = "Panel", key = "panel:" .. p[2],
+				icon = icon or 133633, atlas = atlas, portrait = portrait, binding = p[2], button = p[3] }
+			-- A new character has no currencies, and the game's Currency binding then does nothing.
+			if p[2] == "TOGGLECURRENCY" and C_CurrencyInfo.GetCurrencyListSize() <= 0 then
+				e.binding, e.button = nil, nil
+				e.value, e.action = "|cff808080None yet|r", "No currencies yet"
+				e.call = function() print("Lookup: this character has no currencies yet.") end
+			end
+			add(e)
 		end
 	end
 	-- Character tabs with no binding command (Skills, Statistics). The tabs are Frames, so no
