@@ -365,14 +365,32 @@ run:SetScript("OnDragStart", function()
 	end
 end)
 
+-- The key that opened the box can also send its character (Shift+F types "F"). Characters
+-- count only after the box has seen a key press of its own.
+local fresh = false
+
+---Whether a key press, with its modifiers, is one of the keys bound to Lookup.
+local function isLookupKey(key)
+	if IsKeyPressIgnoredForBinding(key) then return false end
+	local chord = CreateKeyChordStringUsingMetaKeyState(key)
+	for _, bound in ipairs({ GetBindingKey("LOOKUP_TOGGLE") }) do
+		if bound == chord then return true end
+	end
+	return false
+end
+
 box:SetScript("OnChar", function(_, char)
+	if fresh then return end
 	session:type(char)
 	refresh()
 end)
 
 box:SetScript("OnKeyDown", function(self, key)
+	fresh = false
 	local propagate = false
-	if key == "ENTER" then
+	if isLookupKey(key) then
+		ns.close() -- the box takes every key, so its own binding never runs
+	elseif key == "ENTER" then
 		local entry = session:selectedEntry()
 		local useAlt = IsShiftKeyDown() and armedAlt ~= nil
 		local plan = useAlt and armedAlt or armed
@@ -393,8 +411,6 @@ box:SetScript("OnKeyDown", function(self, key)
 		ns.select(session.selected - 1)
 	elseif key == "DOWN" or key == "TAB" then
 		ns.select(session.selected + 1)
-	elseif key == "SPACE" and IsShiftKeyDown() then
-		ns.close() -- the open binding also closes
 	elseif key == "PRINTSCREEN" then
 		propagate = true
 	end
@@ -420,6 +436,7 @@ function ns.toggle()
 	ns.log("index", #entries, "entries in", math.floor(debugprofilestop() - start), "ms")
 	session = session or ns.newSession(LookupDB, time)
 	session:open(entries)
+	fresh = true
 	box:Show()
 	refresh()
 end
