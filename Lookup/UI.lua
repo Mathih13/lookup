@@ -90,8 +90,9 @@ caret:SetSize(2, 17)
 local count = text(field, 12, 0.48, 0.48, 0.48)
 count:SetPoint("RIGHT", -16, 0)
 
+-- A section heading: just above the first row, in line with the row icons.
 local recentLabel = text(box, 12, 0.6, 0.6, 0.6)
-recentLabel:SetPoint("TOPLEFT", field, "BOTTOMLEFT", NAME_X, -2)
+recentLabel:SetPoint("BOTTOMLEFT", field, "BOTTOMLEFT", ICON_X, -(ROWS_TOP - TOP - SEARCH_H + HEADER_H - 3))
 recentLabel:SetText("Recent")
 
 -- The status line: what Enter does for the selected row, and a second hint, under the
@@ -126,6 +127,7 @@ local tab = CreateFrame("Button", "LookupTab", UIParent, "SecureActionButtonTemp
 tab:SetAttribute("type", "click")
 tab:SetAttribute("useOnKeyDown", false) -- /click sends only the release
 local armed -- the selected entry's Action plan (Action.lua)
+local armedAlt -- the plan for its alt (Shift-Enter and a right click), or nil
 local session -- the Query session (Session.lua), made on first open: LookupDB loads after this file
 local rows = {}
 
@@ -234,35 +236,45 @@ local function arm()
 	if inCombat() then return end
 	local row = rows[session.selected]
 	local entry = row and row:IsShown() and row.entry
-	armed = nil
+	armed, armedAlt = nil, nil
 	if not entry then
 		run:Hide()
 		ClearOverrideBindings(bindOwner)
 		return
 	end
-	local tabButton = entry.tab and entry.tab()
-	armed = ns.plan(entry, tabButton and tabButton:IsVisible())
+	local alt = entry.alt
+	local tabOf = entry.tab or (alt and alt.tab)
+	local tabButton = tabOf and tabOf()
+	local visible = tabButton and tabButton:IsVisible()
+	armed = ns.plan(entry, entry.tab and visible)
+	armedAlt = alt and ns.plan(alt, alt.tab and visible) or nil
 	if not armed then -- not reached: the registry drops entries with invalid actions
 		run:Hide()
 		ClearOverrideBindings(bindOwner)
 		return
 	end
-	if armed.clickTab then tab:SetAttribute("clickbutton", tabButton) end
+	if armed.clickTab or (armedAlt and armedAlt.clickTab) then tab:SetAttribute("clickbutton", tabButton) end
 	run:SetAttribute("type", armed.macrotext and "macro" or nil)
 	run:SetAttribute("macrotext", armed.macrotext)
+	-- The right button runs the alt. With an alt that has no secure part it does nothing secure;
+	-- with no alt it falls back to "type", like the left button.
+	run:SetAttribute("type2", armedAlt and (armedAlt.macrotext and "macro" or ATTRIBUTE_NOOP) or nil)
+	run:SetAttribute("macrotext2", armedAlt and armedAlt.macrotext)
 	-- Screen coordinates, no anchor to the row: an anchor would make the box protected.
 	run:ClearAllPoints()
 	run:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", row:GetLeft(), row:GetTop())
 	run:SetSize(row:GetWidth(), row:GetHeight())
 	run:SetFrameLevel(row:GetFrameLevel() + 10)
 	run:Show()
-	for _, key in ipairs({ "ENTER", "SHIFT-ENTER" }) do
-		if armed.enter == "binding" then
-			SetOverrideBinding(bindOwner, true, key, armed.command) -- Blizzard's binding runs it securely
+	local function bind(key, plan, mouseButton)
+		if plan.enter == "binding" then
+			SetOverrideBinding(bindOwner, true, key, plan.command) -- Blizzard's binding runs it securely
 		else
-			SetOverrideBindingClick(bindOwner, true, key, "LookupRun", "LeftButton")
+			SetOverrideBindingClick(bindOwner, true, key, "LookupRun", mouseButton)
 		end
 	end
+	bind("ENTER", armed, "LeftButton")
+	bind("SHIFT-ENTER", armedAlt or armed, armedAlt and "RightButton" or "LeftButton")
 end
 
 local function disarm()
@@ -322,16 +334,18 @@ end
 
 ---Record the pick, close, then run the plan's plain step. Called after the secure
 ---part (LookupRun click or binding command), or alone when there is none.
-function ns.activate(entry)
+---useAlt: Shift-Enter or a right click ran the entry's alt.
+function ns.activate(entry, useAlt)
 	if not entry then return end
 	if session:pick(entry) then -- the calculator: its result is now the query
 		refresh()
 		return
 	end
 	ns.log("activate", entry.key)
-	local keep = IsShiftKeyDown()
+	-- Shift keeps the box open, unless Shift picks the alt.
+	local keep = IsShiftKeyDown() and not entry.alt
 	if not keep then ns.close() end
-	local plan = ns.plan(entry)
+	local plan = ns.plan(useAlt and entry.alt or entry)
 	if plan and plan.after then
 		local ok, err = pcall(plan.after)
 		if not ok then ns.log("run failed", entry.key, err) end
@@ -339,8 +353,8 @@ function ns.activate(entry)
 	if keep and box:IsShown() then refresh() end
 end
 
-run:HookScript("OnClick", function(_, _, down)
-	if not down then ns.activate(session:selectedEntry()) end
+run:HookScript("OnClick", function(_, mouseButton, down)
+	if not down then ns.activate(session:selectedEntry(), mouseButton == "RightButton") end
 end)
 run:SetScript("OnDragStart", function()
 	local entry = session:selectedEntry()
@@ -359,13 +373,15 @@ box:SetScript("OnKeyDown", function(self, key)
 	local propagate = false
 	if key == "ENTER" then
 		local entry = session:selectedEntry()
-		if entry and armed and armed.enter == "binding" then
+		local useAlt = IsShiftKeyDown() and armedAlt ~= nil
+		local plan = useAlt and armedAlt or armed
+		if entry and plan and plan.enter == "binding" then
 			propagate = true -- the override binding runs the command
-			C_Timer.After(0, function() ns.activate(entry) end)
-		elseif entry and armed and armed.enter == "click" then
+			C_Timer.After(0, function() ns.activate(entry, useAlt) end)
+		elseif entry and plan and plan.enter == "click" then
 			propagate = true -- the override binding clicks LookupRun
 		else
-			ns.activate(entry)
+			ns.activate(entry, useAlt)
 		end
 	elseif key == "ESCAPE" then
 		ns.close()

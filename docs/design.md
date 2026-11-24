@@ -7,7 +7,7 @@ Agreed with the user on 2026-11-17. Change this file when a decision changes.
 Use these words the same way in the code, this file and conversation.
 
 - **Entry**: one result row's data: name, category, context, icon, value, one action.
-- **Action**: what Enter does, from a closed set of kinds: `binding` (a binding command, with an optional `button` for the mouse and `tab`), `line` (one macro line), `call` (plain code), `toggle` (`get` and `set`). `after` is a plain step after a `binding` or a `line`.
+- **Action**: what Enter does, from a closed set of kinds: `binding` (a binding command, with an optional `button` for the mouse and `tab`), `line` (one macro line), `call` (plain code), `toggle` (`get` and `set`). `after` is a plain step after a `binding` or a `line`. `alt` is a second action for Shift-Enter and a right click.
 - **Action plan**: how an action runs: an override binding, a LookupRun click, or plain code (`Action.lua`).
 - **Provider**: something that builds entries of one rank: a built-in source, an addon discovery surface, or later an outside addon.
 - **Discovery record**: what an addon discovery surface finds (a slash command, a binding, a LibDataBroker launcher), with the addon that owns it.
@@ -19,7 +19,7 @@ Use these words the same way in the code, this file and conversation.
 
 A Spotlight-style search box for **WoW Forever only** (Interface `16001`). Use Forever's (Camelot) Blizzard UI paths; ignore retail-only systems. Personal tool first, but publishable: display text comes from the game's localized strings. Licence MIT.
 
-v1 is **navigation only**: results open, toggle or link. Nothing casts or uses.
+v1 was **navigation only**. Since v1, spells cast on Enter (out of combat, like every row), and the spellbook opens on Shift-Enter.
 
 ## Identity
 
@@ -36,7 +36,7 @@ Never copy EasyFind code (all rights reserved).
 ## Opening and keys
 
 - Binding `Shift+Space`. On first login, bind it only if the key is unused, and print one line. `/lookup` opens the box; `/lookup reset` clears history. Addon compartment entry.
-- The box auto-focuses. Up/Down select, Enter runs and closes, Shift+Enter runs and keeps it open, Esc or the binding closes. Mouse works.
+- The box auto-focuses. Up/Down select, Enter runs and closes, Shift+Enter runs and keeps it open, Esc or the binding closes. On a row with an `alt` action (spells), Shift+Enter and a right click run the alt and close. Mouse works.
 - A toggle prints one chat line, for example `Damage Meter: Off`.
 
 ## Look
@@ -74,7 +74,7 @@ A thing with several actions gets separate rows, for example `Ashenvale` (Zone) 
 | 3 | Zones, cities, dungeons, raids | Open the map on it |
 | 4 | Quests in the log | `Quests in <zone>` (only when there are some) opens map with quest log. Title match opens the quest details. No waypoints or tracking |
 | 5 | Mounts, pets, toys | Open Collections on it |
-| 6 | Spells | Open the spellbook |
+| 6 | Spells | Cast (`/cast <name>`, the highest rank). Shift-Enter: open the spellbook on the school tab. Passives open the spellbook |
 | 7 | Macros | Open the macro window on it |
 | 8 | Bag items | Open bags with the item highlighted |
 | 9 | Currencies, reputations, achievements | Open the right tab. Achievements are Forever's Legacy Challenges |
@@ -163,4 +163,8 @@ Plain calls are out for panels. Secure rows work.
 - **Binding commands:** Forever's Character, Collections and Legacy tabs are Frames, so `/click` cannot reach them. Every panel and tab with a Blizzard binding command (`TOGGLECURRENCY`, `TOGGLECHARACTER2`, `TOGGLECOLLECTIONSMOUNTJOURNAL`, ...) opens on Enter through `SetOverrideBinding(owner, true, "ENTER", command)`, which runs Blizzard's binding securely. The mouse falls back to `/click <MicroButton>`, so a click on Currency opens the character frame on its current tab.
 - **Unnamed tab buttons:** a second secure button, `LookupTab`, has `type="click"` and `clickbutton` set to the tab (for example a spellbook school tab). LookupRun's macro runs `/click SpellbookMicroButton` and then `/click LookupTab`. The tab exists only after its panel has loaded once, so the first open falls back to the binding command.
 - **Deep links:** after the secure part, an entry's plain `run` may select inside the open panel (mount, pet, macro, bag search). Each one needs the taint check.
+  - Skills and Statistics have no binding command, and their tabs are Frames. `TOGGLECHARACTER2` opens the character frame on Reputation, then `CharacterFrame:OnModeTabClicked(tab)` selects the tab. Reputation is used so that the plain step never hides or shows the paper doll. Taint check pending.
+  - Legacy pages (Reward Track, Challenges, Tree): `TOGGLELEGACYSYSTEM`, then the event a tab click fires, `Legacy.SelectPage` with the tab's id. Lookup finds the tab by its text, never by a fixed index. Taint check pending.
+  - A Legacy Challenge: the Challenges page, then `SelectChallenge(id)` on `LegacySystemFrame`. Taint check pending.
+  - Every deep link into a panel that its binding toggles: if the panel is already open when the box opens, the row skips the binding (it would close the panel) and only selects.
 - **Combat:** anchoring LookupRun over a row makes the box protected. Close the box on `PLAYER_REGEN_DISABLED` (before lockdown) and refuse to open in combat.

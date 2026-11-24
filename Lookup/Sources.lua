@@ -54,6 +54,33 @@ local PANELS = {
 	{ "MAINMENU_BUTTON", "TOGGLEGAMEMENU", nil, "GameMenu" },
 }
 
+-- A row for a place inside a panel that its binding toggles. If the panel is already open when
+-- the box opens, the binding would close it, so the row only selects. Otherwise the binding opens
+-- the panel and select runs after it.
+local function inPanel(e, open, binding, button, select)
+	if open then
+		e.call = select
+	else
+		e.binding, e.button, e.after = binding, button, select
+	end
+	return e
+end
+
+-- The Legacy frame's pages. Its tabs are Frames: a click fires "Legacy.SelectPage" with the tab's
+-- id. Tabs are found by their text, so a new order does not break the rows.
+local LEGACY_PAGES = { "LEGACY_REWARD_TRACK_TAB_TOOLTIP", "LEGACY_CHALLENGE_TAB_TOOLTIP", "LEGACY_TREE_TAB_TOOLTIP" }
+
+local function legacyTab(text)
+	for _, tab in ipairs(LegacySystemFrame and LegacySystemFrame.Tabs or {}) do
+		if tab.tooltipText == text then return tab end
+	end
+end
+
+local function selectLegacyPage(text)
+	local tab = LegacySystemFrame and LegacySystemFrame:IsShown() and legacyTab(text)
+	if tab then EventRegistry:TriggerEvent("Legacy.SelectPage", tab:GetID()) end
+end
+
 ns.provide("panels", RANK.panel, function(add)
 	local pvpIcon = "Interface/ICONS/INV_SideTab_Honor_" .. (UnitFactionGroup("player") or "Alliance") .. "_c60"
 	for _, p in ipairs(PANELS) do
@@ -74,8 +101,41 @@ ns.provide("panels", RANK.panel, function(add)
 			})
 		end
 	end
+	-- Character tabs with no binding command (Skills, Statistics). The tabs are Frames, so no
+	-- binding or /click reaches them. The Reputation binding opens the character frame securely,
+	-- then a plain step selects the tab as a mouse click does. Reputation, not Character: the
+	-- plain step then never hides or shows the paper doll, which reads secret values.
+	local modeTabs = CharacterFrame and CharacterFrame.ModeTabs
+	local characterOpen = CharacterFrame and CharacterFrame:IsShown()
+	for _, key in ipairs({ "SkillsTab", "StatisticsTab" }) do
+		local tab = modeTabs and modeTabs[key]
+		if tab and tab:IsShown() and type(tab.tooltipText) == "string" then
+			add(inPanel({ name = tab.tooltipText, cat = "Panel", key = "panel:" .. key, icon = tab.iconTexture or 133633 },
+				characterOpen, "TOGGLECHARACTER2", "CharacterMicroButton", function()
+					if CharacterFrame:IsShown() and tab:IsShown() then CharacterFrame:OnModeTabClicked(tab) end
+				end))
+		end
+	end
+	-- The Legacy frame loads on first open: until then the icon is the micro menu's.
+	if _G["BINDING_NAME_TOGGLELEGACYSYSTEM"] then
+		local legacyOpen = LegacySystemFrame and LegacySystemFrame:IsShown()
+		for _, global in ipairs(LEGACY_PAGES) do
+			local text = _G[global]
+			if type(text) == "string" then
+				local tab = legacyTab(text)
+				add(inPanel({ name = text, cat = "Panel", key = "panel:" .. global, icon = tab and tab.iconTexture,
+					atlas = not (tab and tab.iconTexture) and "UI-HUD-MicroMenu-Legacy-Up" or nil },
+					legacyOpen, "TOGGLELEGACYSYSTEM", "LegacyMicroButton", function() selectLegacyPage(text) end))
+			end
+		end
+	end
 	add({ name = MACROS or "Macros", cat = "Panel", key = "panel:macros",
 		icon = 136377, line = "/macro" })
+	-- No binding command for the calendar on Forever: the minimap clock button opens it.
+	if GameTimeFrame then
+		add({ name = type(_G["CALENDAR"]) == "string" and _G["CALENDAR"] or "Calendar", cat = "Panel",
+			key = "panel:calendar", atlas = "ui-hud-calendar-1-up", action = "Open", line = "/click GameTimeFrame" })
+	end
 	add({ name = SETTINGS or "Settings", cat = "Panel", key = "panel:settings",
 		atlas = "UI-HUD-MicroMenu-GameMenu-Up", call = function() Settings.OpenToCategory() end })
 	add({ name = KEY_BINDINGS or "Key Bindings", cat = "Panel", key = "panel:keybindings",
@@ -312,12 +372,19 @@ ns.provide("spells", RANK.spell, function(add)
 		local s, slot, line = b.s, b.slot, b.line
 		local rankText = s.subName ~= "" and s.subName or nil
 		-- No page jump: GoToSpell from addon code taints the spellbook and the action bars.
-		add({ name = name, cat = s.isPassive and "Passive" or "Spell", sub = b.lineName,
-			key = "spell:" .. name, icon = s.iconID, value = rankText, action = "Open spellbook",
-			binding = "TOGGLESPELLBOOK", button = "SpellbookMicroButton",
-			tab = function() return spellTab(line) end,
+		local book = { action = "Open spellbook", binding = "TOGGLESPELLBOOK", button = "SpellbookMicroButton",
+			tab = function() return spellTab(line) end }
+		local e = { name = name, cat = s.isPassive and "Passive" or "Spell", sub = b.lineName,
+			key = "spell:" .. name, icon = s.iconID, value = rankText,
 			dragHint = rankText and rankText .. " to your bars",
-			drag = not s.isPassive and function() C_SpellBook.PickupSpellBookItem(slot, bank) end or nil })
+			drag = not s.isPassive and function() C_SpellBook.PickupSpellBookItem(slot, bank) end or nil }
+		if s.isPassive then
+			for k, v in pairs(book) do e[k] = v end
+		else
+			-- Enter casts (the highest rank, as on a macro); Shift-Enter opens the book.
+			e.line, e.action, e.alt = "/cast " .. name, "Cast", book
+		end
+		add(e)
 	end
 end)
 
@@ -407,14 +474,25 @@ ns.provide("reputations", RANK.progress, function(add)
 	end
 end)
 
+-- After the binding opened the Legacy frame: its Challenges page, with this challenge selected.
+local function selectChallenge(id)
+	local frame = LegacySystemFrame
+	if not (frame and frame:IsShown()) then return end
+	selectLegacyPage(_G["LEGACY_CHALLENGE_TAB_TOOLTIP"])
+	-- A series shows as one row: select the step on display.
+	local find = AchievementFrame_FindDisplayedAchievement
+	frame:SelectChallenge(find and find(id) or id)
+end
+
 ns.provide("legacy", RANK.progress, function(add)
+	local open = LegacySystemFrame and LegacySystemFrame:IsShown()
 	for _, category in ipairs(GetCategoryList() or {}) do
 		for i = 1, GetCategoryNumAchievements(category) do
 			local id, name, _, completed, _, _, _, _, _, icon = GetAchievementInfo(category, i)
 			if id then
-				add({ name = name, cat = "Legacy Challenge", key = "ach:" .. id, icon = icon,
-					value = completed and GREEN .. "Complete|r" or nil, action = "Open Legacy Challenges",
-					binding = "TOGGLELEGACYSYSTEM", button = "LegacyMicroButton" })
+				add(inPanel({ name = name, cat = "Legacy Challenge", key = "ach:" .. id, icon = icon,
+					value = completed and GREEN .. "Complete|r" or nil, action = "Open challenge" },
+					open, "TOGGLELEGACYSYSTEM", "LegacyMicroButton", function() selectChallenge(id) end))
 			end
 		end
 	end

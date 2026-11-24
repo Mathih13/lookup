@@ -37,9 +37,14 @@ function ns.discover.slash()
 			local command = _G["SLASH_" .. key .. "1"]
 			if type(command) == "string" and not seen[command] then
 				seen[command] = true
-				local aliases, i = {}, 2
+				-- Other spellings. Some repeat the first one (SLASH_CALENDAR2 = "/calendar").
+				local aliases, spelled, i = {}, { [command:lower()] = true }, 2
 				while type(_G["SLASH_" .. key .. i]) == "string" do
-					aliases[#aliases + 1] = _G["SLASH_" .. key .. i]
+					local alias = _G["SLASH_" .. key .. i]
+					if not spelled[alias:lower()] then
+						spelled[alias:lower()] = true
+						aliases[#aliases + 1] = alias
+					end
 					i = i + 1
 				end
 				local title, folder = ns.addonOf(_G, "SLASH_" .. key .. "1")

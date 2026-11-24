@@ -13,6 +13,7 @@ addons = {
 local hiddenList = { WHO = true, ATLASLOOT = true }
 SlashCmdList = setmetatable({ Auctionator = true, LOOKUP = true }, { __index = hiddenList })
 SLASH_WHO1 = "/who"
+SLASH_WHO2, SLASH_WHO3 = "/WHO", "/w2" -- the same spelling twice is not an alias
 SLASH_Auctionator1, SLASH_Auctionator2 = "/auctionator", "/atr"
 SLASH_ATLASLOOT1, SLASH_ATLASLOOT2 = "/atlasloot", "/al"
 SLASH_LOOKUP1 = "/lookup"
@@ -29,6 +30,7 @@ assert(al and al.title == "AtlasLoot Forever [Core]", al and al.title)
 assert(al.icon == nil and al.atlas == "loot-atlas")
 -- Blizzard's have no addon; Lookup's own count as Blizzard's (no addon row for itself).
 assert(byCommand["/who"].title == nil and byCommand["/lookup"].title == nil)
+assert(#byCommand["/who"].aliases == 1 and byCommand["/who"].aliases[1] == "/w2")
 
 -- Key bindings: only named ones, with the addon that named them.
 local BINDINGS = { { "TOGGLEWORLDMAP", "BINDING_HEADER_INTERFACE", "M" }, { "ATLASLOOT_TOGGLE", nil, nil },

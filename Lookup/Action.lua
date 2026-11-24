@@ -10,6 +10,9 @@
 --   call = function              plain code: only calls proven clean (no panel opens).
 --   toggle = { get, set }        flips a boolean setting in place.
 -- after = function runs as plain code after the secure part of a binding or a line.
+-- alt = { ...one action kind and its fields, action = "text" } is a second action for
+-- Shift-Enter and a right click (for example a spell casts on Enter and opens the spellbook
+-- on Shift-Enter). It has no alt of its own, and only one of the two may have a tab.
 -- Panel opens must not run from plain addon code: they taint the action bars.
 local _, ns = ...
 
@@ -44,6 +47,13 @@ function ns.actionKind(entry)
 	end
 	if entry.after ~= nil and ((kind ~= "binding" and kind ~= "line") or type(entry.after) ~= "function") then
 		return nil, "after needs a binding or a line"
+	end
+	if entry.alt ~= nil then
+		local alt = entry.alt
+		if type(alt) ~= "table" or alt.alt ~= nil then return nil, "alt must be one action, with no alt" end
+		if entry.tab and alt.tab then return nil, "tab on both actions" end
+		local _, altErr = ns.actionKind(alt)
+		if altErr then return nil, "alt: " .. altErr end
 	end
 	return kind
 end

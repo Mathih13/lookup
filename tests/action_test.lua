@@ -60,4 +60,15 @@ p.after()
 print = realPrint
 assert(value == true and said == "Auto Loot: On", said)
 
+-- A second action for Shift-Enter: a spell casts, and the alt opens the book on its tab.
+local cast = { line = "/cast Seal of Light",
+	alt = { binding = "TOGGLESPELLBOOK", button = "SpellbookMicroButton", tab = function() end } }
+assert(ns.actionKind(cast) == "line")
+p = ns.plan(cast.alt, false)
+assert(p.clickTab and p.macrotext == "/click SpellbookMicroButton\n/click LookupTab")
+assert(select(2, ns.actionKind({ line = "/cast X", alt = { call = after, alt = { call = after } } })))
+assert(select(2, ns.actionKind({ line = "/cast X", alt = {} })) == "alt: no action")
+assert(select(2, ns.actionKind({ binding = "A", button = "B", tab = after,
+	alt = { binding = "A", button = "B", tab = after } })) == "tab on both actions")
+
 print("ok")

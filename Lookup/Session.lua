@@ -217,7 +217,9 @@ function Session:view()
 		local action = entry.action
 		if type(action) == "function" then action = action() end
 		status = { action = action or entry.line and "Run " .. entry.line or "Open" }
-		if entry.drag then
+		if entry.alt then
+			status.right = { "Shift-Enter", entry.alt.action or "Open" }
+		elseif entry.drag then
 			status.right = { "Drag", entry.dragHint or "to your bars" }
 		elseif entry.toggle then
 			status.right = { "Shift-Enter", "keep open" }

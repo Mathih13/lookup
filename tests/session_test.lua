@@ -45,6 +45,10 @@ typed(s, "seal")
 v = s:view()
 assert(names(v) == "Seal of Light" and v.rows[1].hl and v.hint == nil)
 assert(v.status.action == "Open" and v.status.right[1] == "Drag" and v.status.right[2] == "Rank 1 to your bars")
+-- A second action shows instead of the drag hint.
+entries[3].alt = { binding = "TOGGLESPELLBOOK", action = "Open spellbook" }
+assert(s:view().status.right[1] == "Shift-Enter" and s:view().status.right[2] == "Open spellbook")
+entries[3].alt = nil
 -- Ranking does not write onto entries.
 assert(entries[3].hl == nil)
 s:backspace(true)
