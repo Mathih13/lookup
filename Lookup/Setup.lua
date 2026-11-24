@@ -131,8 +131,7 @@ function ns.showSetup()
 	refresh()
 end
 
----At login: the window, once, for a player with no Lookup key. Out of combat, a moment after
----the login messages.
+---At login: the window, once, for a player with no Lookup key. Out of combat.
 function ns.firstRun()
 	LookupDB.bound = nil -- the old auto-bind flag
 	if LookupDB.setup then return end
@@ -152,5 +151,5 @@ function ns.firstRun()
 			ns.showSetup()
 		end
 	end
-	C_Timer.After(3, show)
+	show()
 end
