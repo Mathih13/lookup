@@ -54,7 +54,7 @@ Type a sum such as `1250*3` or `(40+12)/4`. The first row shows the answer.
 
 - **Out of combat only.** The box closes when combat starts. In combat, Blizzard does not let addons open panels or cast spells from a search box.
 - **Light.** Lookup has no data files. It reads what it needs from the game when you open the box.
-- **No taint.** Panels open through Blizzard's own key bindings and secure buttons, the same way your keys and micro menu open them. Lookup does not run panel code itself, so it leaves your action bars working in combat.
+- **No taint.** Panels open through Blizzard's own key bindings and secure buttons, the same way your keys and micro menu open them, so your action bars keep working in combat.
 - `/lookup reset` makes Lookup forget your picks and command history.
 
 ## Feedback
