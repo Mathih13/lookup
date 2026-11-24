@@ -18,6 +18,7 @@ You no longer need to remember which tab a setting is on, which micro button ope
 
 - **Panels and tabs**: Character, Skills, Statistics, Reputation, Currency, Spellbook, Talents, Professions, Legacy (Reward Track, Challenges, Tree), Quest Log, Collections, Calendar and more
 - **Settings**: on/off settings change in place, and the row shows the new state. Other settings open at their page
+- **Minimap tracking**: turn Flight Master, Mailbox, Repair and the other tracking types on or off
 - **Spells**: Enter casts the spell. Shift+Enter opens the spellbook on its tab
 - **Zones, cities, dungeons and raids**: open the map there
 - **Quests in your log**: open the quest

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Minimap tracking: each tracking type (Flight Master, Mailbox, Repair, ...) is an on/off row.
 - Stopwatch and Clock rows. Search "stopwatch" or "clock".
 - An addon's menu opens by the search box when its minimap button is hidden.
 

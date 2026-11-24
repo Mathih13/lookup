@@ -10,6 +10,7 @@ A Spotlight-style search box for **WoW Forever**. Press your Lookup key, type a 
 |---|---|
 | Panels and tabs (Character, Skills, Reputation, Spellbook, Legacy, Collections, ...) | Opens the panel on that tab |
 | Settings | Turns an on/off setting on or off in place. Other settings open at their page |
+| Minimap tracking (Flight Master, Mailbox, Repair, ...) | Turns that tracking on or off |
 | Key bindings | Opens Key Bindings |
 | Zones, cities, dungeons and raids | Opens the map there |
 | Quests in your log | Opens the quest |

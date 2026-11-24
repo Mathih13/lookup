@@ -204,6 +204,42 @@ local function walkCategory(add, category, parentName)
 	end
 end
 
+-- Minimap tracking (the minimap's tracking menu): each type is an on/off row. Blizzard's helper
+-- also keeps the Options panel in step for filters it shows there (trivial quests).
+local function trackingIndex(name)
+	for i = 1, C_Minimap.GetNumTrackingTypes() do
+		local t = C_Minimap.GetTrackingInfo(i)
+		if t and t.name == name then return i, t end
+	end
+end
+
+ns.provide("tracking", RANK.setting, function(add)
+	local setTracking = MinimapUtil and MinimapUtil.SetTrackingFilterByFilterIndex or C_Minimap.SetTracking
+	local sub = type(_G["TRACKING"]) == "string" and _G["TRACKING"] or "Tracking"
+	for i = 1, C_Minimap.GetNumTrackingTypes() do
+		local t = C_Minimap.GetTrackingInfo(i)
+		if t and type(t.name) == "string" and t.name ~= "" then
+			local name = t.name
+			local function get()
+				local _, now = trackingIndex(name)
+				return now ~= nil and now.active == true
+			end
+			add({
+				name = name, cat = "Tracking", key = "tracking:" .. (t.spellID or name), icon = t.texture,
+				toggle = { get = get, set = function(on)
+					local index = trackingIndex(name)
+					if index then setTracking(index, on) end
+				end },
+				action = function() return get() and "Stop tracking" or "Track" end,
+			})
+		end
+	end
+	if C_Minimap.GetNumTrackingTypes() > 0 and type(_G["UNCHECK_ALL"]) == "string" then
+		add({ name = sub .. ": " .. _G["UNCHECK_ALL"], cat = "Tracking", key = "tracking:none", icon = 136243,
+			action = "Stop all tracking", call = function() C_Minimap.ClearAllTracking() end })
+	end
+end)
+
 ns.provide("settings", RANK.setting, function(add)
 	foundDamageMeter = false
 	for _, category in ipairs(SettingsPanel:GetAllCategories()) do

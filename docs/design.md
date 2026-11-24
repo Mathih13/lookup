@@ -71,7 +71,7 @@ A thing with several actions gets separate rows, for example `Ashenvale` (Zone) 
 | Rank | Category | Enter does |
 |---|---|---|
 | 1 | UI panels and tabs | Open the panel or tab |
-| 2 | Settings and key bindings | On/off: toggle in place and show state. Other: open Settings at it. Bindings: open Key Bindings. Skip protected settings |
+| 2 | Settings, minimap tracking and key bindings | On/off: toggle in place and show state. Other: open Settings at it. Tracking types (the minimap menu: Flight Master, Mailbox, ...) toggle in place through Blizzard's `MinimapUtil` helper, plus one row that stops all tracking. Bindings: open Key Bindings. Skip protected settings |
 | 3 | Zones, cities, dungeons, raids | Open the map on it |
 | 4 | Quests in the log | `Quests in <zone>` (only when there are some) opens map with quest log. Title match opens the quest details. No waypoints or tracking |
 | 5 | Mounts, pets, toys | Open Collections on it |
