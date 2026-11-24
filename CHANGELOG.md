@@ -1,10 +1,12 @@
 # Lookup
 
-## Unreleased
+## v0.2.0
 
+- New first-time setup: a key card opens where the search box opens. Press the key it shows to use it, or press another combo to pick that one instead. In v0.1.0 the welcome window could close by itself at login.
+- Your Lookup key now closes the box too.
 - Minimap tracking: each tracking type (Flight Master, Mailbox, Repair, ...) is an on/off row.
-- Stopwatch, Clock and Edit Mode rows. Search "stopwatch" or "clock".
-- An addon's menu opens by the search box when its minimap button is hidden.
+- Stopwatch, Clock and Edit Mode rows.
+- The Currency row says when a character has no currencies yet, instead of doing nothing.
 
 ## v0.1.0
 
