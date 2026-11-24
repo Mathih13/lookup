@@ -79,7 +79,7 @@ A thing with several actions gets separate rows, for example `Ashenvale` (Zone) 
 | 7 | Macros | Open the macro window on it |
 | 8 | Bag items | Open bags with the item highlighted |
 | 9 | Currencies, reputations, achievements | Open the right tab. Achievements are Forever's Legacy Challenges |
-| 10 | Slash commands | Run the command as a macro line. See "Command mode" |
+| 10 | Slash commands | Run the command as a macro line. Only in command mode (the query starts with `/`), so they do not crowd a plain search. See "Command mode" |
 | 11 | Friends, guild members | Open a whisper |
 
 **Drag**: spells, items, macros, mounts, pets and toys drag from the row. The box closes on drag start. Out of combat only.

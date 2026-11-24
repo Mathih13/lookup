@@ -25,7 +25,7 @@ You no longer need to remember which tab a setting is on, which micro button ope
 - **Macros**: open the macro window on the macro
 - **Bag items**: open your bags with the item highlighted
 - **Currencies, reputations and Legacy Challenges**: open the right tab, or the challenge itself
-- **Slash commands** from the game and from your other addons, with the addon's name beside each one
+- **Slash commands** from the game and from your other addons, with the addon's name beside each one. Type **/** first to search them
 - **Addon launchers**: the buttons other addons put on your minimap or data broker bar
 - **Friends and guild members**: start a whisper
 - **Key bindings**: find a binding and open Key Bindings

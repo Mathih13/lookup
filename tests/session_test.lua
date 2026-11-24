@@ -98,6 +98,11 @@ assert(names(v) == "/who,/atlasloot,/auctionator,/whisper", names(v))
 assert(v.hint == "Type a command" and v.header == nil)
 assert(v.status.action == "Run /who" and v.status.right[1] == "Space")
 
+-- A plain search leaves commands out: they show only in command mode.
+s:open(entries)
+typed(s, "who")
+assert(#s:view().rows == 0, names(s:view()))
+
 -- An exact alias goes first.
 s:open(entries)
 typed(s, "/w")

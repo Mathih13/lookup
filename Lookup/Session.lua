@@ -25,7 +25,8 @@ Session.__index = Session
 function ns.newSession(db, now)
 	db.history = db.history or {}
 	db.args = db.args or {}
-	return setmetatable({ db = db, now = now, entries = {}, query = "", selected = 1, rows = {} }, Session)
+	return setmetatable({ db = db, now = now, entries = {}, searchable = {}, query = "", selected = 1, rows = {} },
+		Session)
 end
 
 ---Forget every pick: entries and arguments.
@@ -144,7 +145,7 @@ function Session:update()
 			self.header = #self.rows > 0 and "Recent" or nil
 		end
 	else
-		self.rows, total = ns.rank(self.entries, query, self.db.history, self.now(), MAX_ROWS)
+		self.rows, total = ns.rank(self.searchable, query, self.db.history, self.now(), MAX_ROWS)
 		local calc = calcRow(query)
 		if calc then
 			table.insert(self.rows, 1, calc)
@@ -160,6 +161,11 @@ end
 ---Start over with fresh entries (on open).
 function Session:open(entries)
 	self.entries, self.query, self.token, self.selected = entries, "", nil, 1
+	-- Slash commands show only in command mode, not in a plain search.
+	self.searchable = {}
+	for _, e in ipairs(entries) do
+		if not e.slash then self.searchable[#self.searchable + 1] = e end
+	end
 	self:update()
 end
 

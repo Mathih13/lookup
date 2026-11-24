@@ -19,7 +19,7 @@ A Spotlight-style search box for **WoW Forever**. Press your Lookup key, type a 
 | Bag items | Opens your bags with the item highlighted |
 | Currencies and reputations | Opens the right tab |
 | Legacy Challenges | Opens the Legacy panel on that challenge |
-| Slash commands, from Blizzard and from your addons | Runs the command |
+| Slash commands, from Blizzard and from your addons (type `/` first) | Runs the command |
 | Addon launchers (minimap buttons) | Opens the addon's window |
 | Friends and guild members | Starts a whisper |
 
