@@ -133,13 +133,15 @@ ns.provide("panels", RANK.panel, function(add)
 		icon = 136377, line = "/macro" })
 	-- Panels with no binding command on Forever: a secure macro line opens them, as a click on
 	-- their minimap button or the command typed in chat would.
-	local stopwatch = _G["SLASH_STOPWATCH1"]
+	local stopwatch, editMode = _G["SLASH_STOPWATCH1"], _G["SLASH_EDITMODE1"]
 	for _, p in ipairs({
 		{ "CALENDAR", "Calendar", _G["GameTimeFrame"] and "/click GameTimeFrame", nil, "ui-hud-calendar-1-up" },
 		{ "STOPWATCH_TITLE", "Stopwatch", type(stopwatch) == "string" and stopwatch,
 			"Interface/Icons/INV_Misc_PocketWatch_01" },
 		{ "TIMEMANAGER_TITLE", "Clock", _G["TimeManagerClockButton"] and "/click TimeManagerClockButton",
 			"Interface/Icons/INV_Misc_PocketWatch_02" },
+		-- Blizzard's /editmode handler opens it. ShowUIPanel from addon code would taint Edit Mode.
+		{ "HUD_EDIT_MODE_MENU", "Edit Mode", type(editMode) == "string" and editMode, "Interface/Icons/INV_Misc_Wrench_01" },
 	}) do
 		if p[3] then
 			local name = _G[p[1]]
