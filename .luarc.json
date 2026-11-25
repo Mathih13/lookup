@@ -18,6 +18,7 @@
   ],
   "workspace.ignoreDir": [
     ".tools",
+    "scripts",
     "tests"
   ],
   "diagnostics.globals": [

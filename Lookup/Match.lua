@@ -1,15 +1,11 @@
--- Matching and ranking. Pure logic: tested in tests/match_test.lua.
 local _, ns = ...
 
--- Latin-1 letters (UTF-8 lead byte 0xC3) to plain ASCII, indexed by the second byte - 0x7F.
 local ACCENTS = "AAAAAAACEEEEIIIIDNOOOOOxOUUUUYTsaaaaaaaceeeeiiiidnooooo/ouuuuyty"
 
 local function unaccent(b)
 	return ACCENTS:sub(b:byte() - 0x7F, b:byte() - 0x7F)
 end
 
----Lower case, no accents or apostrophes, other punctuation as one space.
----Also returns, per normalized character, its first and last byte in `s` (for highlights).
 ---@param s string
 ---@return string norm, integer[] starts, integer[] ends
 function ns.normalize(s)
@@ -40,14 +36,12 @@ function ns.normalize(s)
 	return table.concat(out), starts, ends
 end
 
--- Words of a normalized string, with their start positions.
 local function words(s)
 	local t = {}
 	for at, w in s:gmatch("()(%S+)") do t[#t + 1] = { w = w, at = at } end
 	return t
 end
 
--- Short English aliases. A query word that equals a key also matches as the value.
 ns.ALIASES = {
 	rep = "reputation", dmg = "damage", lfg = "dungeon finder", lfd = "dungeon finder",
 	ach = "achievements", spec = "specialization", keybind = "key bindings",
@@ -55,12 +49,8 @@ ns.ALIASES = {
 	gfx = "graphics", sfx = "sound", fps = "framerate", gold = "currency",
 }
 
--- Each tier beats every score of the tier below it.
 local PREFIX, INITIALS, FUZZY = 3000, 2000, 1000
 
--- Each scorer returns a score and the matched ranges {from, to} in the normalized name.
-
----Every query word is a prefix of a different name word.
 local function prefixScore(qWords, nWords)
 	local used, firstAt, hl = {}, nil, {}
 	for _, q in ipairs(qWords) do
@@ -86,7 +76,6 @@ local function initialsScore(q, nWords)
 	return INITIALS, hl
 end
 
----Query letters appear in order. Tighter matches score higher.
 local function fuzzyScore(q, name)
 	local pos, first, last, hl = 0, nil, nil, {}
 	for i = 1, #q do
@@ -109,10 +98,9 @@ local function scoreNormalized(q, name)
 	if not s then s, hl = initialsScore((q:gsub(" ", "")), nWords) end
 	if not s then s, hl = fuzzyScore(q, name) end
 	if not s then return nil end
-	return s - #name, hl -- shorter names first
+	return s - #name, hl
 end
 
----Score a normalized query against a normalized name. Higher is better; nil means no match.
 ---@param q string
 ---@param name string
 ---@return number? score, table? ranges matched ranges in the name
@@ -126,7 +114,6 @@ function ns.score(q, name)
 	return best, bestHl
 end
 
----Wrap the matched parts of `name` in a colour code. `|` in the name is escaped.
 ---@param name string
 ---@param ranges table? from ns.score
 ---@param color string for example "|cffffd100"
@@ -153,10 +140,6 @@ function ns.highlight(name, ranges, color)
 	return table.concat(out)
 end
 
--- Calculator ---------------------------------------------------------------------
-
--- Recursive descent over tokens: expr = term {+|- term}; term = unary {*|/|% unary};
--- unary = (-|+) unary | power; power = atom [^ unary]; atom = number | ( expr ).
 local function parse(tokens)
 	local i = 1
 	local function peek() return tokens[i] end
@@ -203,8 +186,6 @@ local function parse(tokens)
 	return v
 end
 
----The value of an arithmetic query such as "1+10" or "(3.5 + 2) * 4", or nil when the
----query is not arithmetic. It needs at least one operator. "x" also multiplies.
 ---@param s string
 ---@return number?
 function ns.calc(s)
@@ -227,7 +208,6 @@ function ns.calc(s)
 	return v
 end
 
----A calculator result as text: whole numbers without decimals, others to 10 digits.
 function ns.formatNumber(v)
 	if v == math.floor(v) and math.abs(v) < 1e15 then return ("%d"):format(v) end
 	return (("%.10g"):format(v))
@@ -235,7 +215,6 @@ end
 
 local DAY = 86400
 
----History boost: frequent and recent picks rank higher, at most 500 (below one tier).
 ---@param h {count: number, last: number}?
 ---@param now number
 function ns.boost(h, now)
@@ -244,8 +223,6 @@ function ns.boost(h, now)
 	return math.min(h.count, 10) * 50 / (1 + age / 7)
 end
 
----Rank entries for a query. Returns at most `limit` rows ({ entry, hl = matched ranges }),
----and the number of matches. Entries are not changed, apart from a cached `norm`.
 ---@param entries table[] each has `name`, `rank` (category order), `key` (history id); `norm` is cached here
 ---@param query string raw text
 ---@param history table<string, {count: number, last: number}>
@@ -274,7 +251,6 @@ function ns.rank(entries, query, history, now, limit)
 	return out, #hits
 end
 
----The most recent picks that still exist, newest first.
 function ns.recent(entries, history, limit)
 	local list = {}
 	for _, e in ipairs(entries) do
@@ -285,7 +261,6 @@ function ns.recent(entries, history, limit)
 	return list
 end
 
----Record a pick.
 function ns.remember(history, key, now)
 	local h = history[key] or { count = 0 }
 	h.count = h.count + 1

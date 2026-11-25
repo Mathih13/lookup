@@ -1,34 +1,23 @@
--- Addon discovery: what other addons offer, found with no per-addon code. Each surface returns
--- discovery records; providers (Sources.lua) turn them into entries, and /lookup probe counts
--- them. See docs/design.md "Other addons".
 local addonName, ns = ...
 ns.discover = {}
 
----Title and folder name of the addon that set tbl[key], or nil for Blizzard's own (secure)
----values and Lookup's.
 function ns.addonOf(tbl, key)
 	local secure, by = issecurevariable(tbl, key)
 	if secure or not by or by == addonName then return nil end
 	return ns.addonTitle(by), by
 end
 
----An addon's title without colour codes and inline icons ("|T...|t AtlasLoot Forever [Core]").
 function ns.addonTitle(folder)
 	local title = C_AddOns.GetAddOnMetadata(folder, "Title") or folder
 	return strtrim((title:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|T.-|t", "")))
 end
 
----The addon's TOC icon: a texture, or else an atlas name.
 local function addonIcon(folder)
 	if not folder then return nil, nil end
 	local icon = C_AddOns.GetAddOnMetadata(folder, "IconTexture")
 	return icon, not icon and C_AddOns.GetAddOnMetadata(folder, "IconAtlas") or nil
 end
 
----Slash commands: { command, aliases, title, folder, icon, atlas }. title and folder are nil
----for Blizzard's. aliases are the other spellings (SLASH_X2, ...).
----Chat moves registered commands into a hidden table on first use and empties SlashCmdList
----(ChatFrameUtil ImportListToHash), so read both. The SLASH_ global keeps the addon's taint.
 function ns.discover.slash()
 	local out, seen = {}, {}
 	local hidden = getmetatable(SlashCmdList)
@@ -37,7 +26,6 @@ function ns.discover.slash()
 			local command = _G["SLASH_" .. key .. "1"]
 			if type(command) == "string" and not seen[command] then
 				seen[command] = true
-				-- Other spellings. Some repeat the first one (SLASH_CALENDAR2 = "/calendar").
 				local aliases, spelled, i = {}, { [command:lower()] = true }, 2
 				while type(_G["SLASH_" .. key .. i]) == "string" do
 					local alias = _G["SLASH_" .. key .. i]
@@ -57,8 +45,6 @@ function ns.discover.slash()
 	return out
 end
 
----Key bindings that have a name: { command, name, header, bound, title, folder }. title and
----folder are nil for Blizzard's.
 function ns.discover.bindings()
 	local out = {}
 	for i = 1, GetNumBindings() do
@@ -78,8 +64,6 @@ local function libStub(major)
 	return _G.LibStub and _G.LibStub(major, true)
 end
 
----LibDataBroker launchers: { name, label, icon, atlas, onClick, title, folder }.
----The owner is the addon of the same name if there is one, else the one that set OnClick.
 function ns.discover.launchers()
 	local out = {}
 	local ldb = libStub("LibDataBroker-1.1")
@@ -101,14 +85,11 @@ function ns.discover.launchers()
 	return out
 end
 
----The minimap button LibDBIcon made for a launcher, if any: its menus open where they normally do.
 function ns.discover.minimapButton(name)
 	local icon = libStub("LibDBIcon-1.0")
 	return icon and type(icon.GetMinimapButton) == "function" and icon:GetMinimapButton(name) or nil
 end
 
----Log the discovery records per surface, the surfaces not built yet, and the entries per
----provider, so counts on real addon sets decide what to build next.
 function ns.probe()
 	local n, lines = {}, {}
 	local function count(k, line)
@@ -122,7 +103,6 @@ function ns.probe()
 		count(r.title and "binding.addon" or "binding.blizzard", r.title and r.command .. " (" .. r.title .. ")")
 	end
 	for _, r in ipairs(ns.discover.launchers()) do count("launcher", r.name .. " (" .. tostring(r.title) .. ")") end
-	-- Not built yet: counted to decide.
 	for _, data in ipairs(AddonCompartmentFrame and AddonCompartmentFrame.registeredAddons or {}) do
 		count("compartment", tostring(data.text))
 	end

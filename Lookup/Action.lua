@@ -1,25 +1,9 @@
--- The Action plan: how Enter and a click run an entry. See docs/design.md "Terms" and
--- "Panel-opening architecture". Pure (no frames), so tests run it in plain Lua.
---
--- An entry sets exactly one action kind:
---   binding = "TOGGLESPELLBOOK"  a binding command. Enter runs it through an override binding,
---                                which is secure. button = "SpellbookMicroButton" gives the mouse
---                                a "/click" path. tab = function returning a tab button to click
---                                after the panel opens (needs button).
---   line = "/macro"              one macro line, run by the secure LookupRun button.
---   call = function              plain code: only calls proven clean (no panel opens).
---   toggle = { get, set }        flips a boolean setting in place.
--- after = function runs as plain code after the secure part of a binding or a line.
--- alt = { ...one action kind and its fields, action = "text" } is a second action for
--- Shift-Enter and a right click (for example a spell casts on Enter and opens the spellbook
--- on Shift-Enter). It has no alt of its own, and only one of the two may have a tab.
--- Panel opens must not run from plain addon code: they taint the action bars.
 local _, ns = ...
 
 local KINDS = { "binding", "line", "call", "toggle" }
-local MAX_LINE = 255 -- the macrotext limit
+local MACROTEXT_LIMIT = 255
+ns.MACROTEXT_LIMIT = MACROTEXT_LIMIT
 
----The entry's action kind, or nil and the reason it is not valid.
 ---@return string? kind, string? err
 function ns.actionKind(entry)
 	local kind
@@ -32,8 +16,8 @@ function ns.actionKind(entry)
 	if not kind then return nil, "no action" end
 	local v = entry[kind]
 	if kind == "binding" and type(v) ~= "string" then return nil, "binding is not a string" end
-	if kind == "line" and (type(v) ~= "string" or v:find("\n") or #v > MAX_LINE) then
-		return nil, "line must be one line of at most " .. MAX_LINE .. " characters"
+	if kind == "line" and (type(v) ~= "string" or v:find("\n") or #v > MACROTEXT_LIMIT) then
+		return nil, "line must be one line of at most " .. MACROTEXT_LIMIT .. " characters"
 	end
 	if kind == "call" and type(v) ~= "function" then return nil, "call is not a function" end
 	if kind == "toggle" and (type(v) ~= "table" or type(v.get) ~= "function" or type(v.set) ~= "function") then
@@ -58,12 +42,6 @@ function ns.actionKind(entry)
 	return kind
 end
 
----How to run an entry.
----  enter: "binding" (the override binding runs `command`), "click" (the override binding
----         clicks LookupRun), or "plain" (no secure part: run `after` at once).
----  macrotext: LookupRun's macro, for the mouse and for an Enter that clicks. Nil: no secure part.
----  clickTab: LookupTab must hold the tab button, and the macro clicks it.
----  after: plain code to run after the secure part, or nil.
 ---@param tabVisible boolean? nil when the entry has no tab button now, else whether it is visible
 ---@return table? plan, string? err
 function ns.plan(entry, tabVisible)
@@ -83,7 +61,6 @@ function ns.plan(entry, tabVisible)
 	end
 	local open = entry.button and "/click " .. entry.button
 	if tabVisible ~= nil and open then
-		-- Open the panel unless it is open (the click would close it), then click the tab.
 		local macrotext = (tabVisible and "" or open .. "\n") .. "/click LookupTab"
 		return { enter = "click", macrotext = macrotext, clickTab = true, after = entry.after }
 	end

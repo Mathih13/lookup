@@ -1,11 +1,7 @@
--- First-time setup: a welcome window that gives Lookup a key. See docs/design.md "First-time setup".
--- The helpers at the top are pure, for tests. The window is made on first show.
 local _, ns = ...
 
--- Suggested keys, in order. The first one with no binding wins.
 local CANDIDATES = { "CTRL-SPACE", "CTRL-F", "SHIFT-F" }
 
----The first suggested key that nothing uses, or the first one when all are taken.
 ---@param actionOf fun(key: string): string? GetBindingAction
 function ns.suggestKey(actionOf, candidates)
 	candidates = candidates or CANDIDATES
@@ -15,7 +11,6 @@ function ns.suggestKey(actionOf, candidates)
 	return candidates[1]
 end
 
----The name of what a key does now, or nil when it is free or already opens Lookup.
 ---@param actionOf fun(key: string): string? GetBindingAction
 function ns.keyConflict(key, actionOf)
 	local action = actionOf(key) or ""
@@ -24,8 +19,6 @@ function ns.keyConflict(key, actionOf)
 	return type(name) == "string" and name or action
 end
 
-
----A binding string as keycap labels: "CTRL-SPACE" -> { "Ctrl", "Spacebar" }.
 function ns.keyParts(key, keyText)
 	local MOD = { CTRL = "Ctrl", ALT = "Alt", SHIFT = "Shift", META = "Cmd" }
 	local parts = {}
@@ -33,15 +26,13 @@ function ns.keyParts(key, keyText)
 	return parts
 end
 
----Whether a key press can be a Lookup key: a combo with a modifier, or an F key. Plain keys
----(movement, chat) pass through the card untouched.
 function ns.isKeyChoice(chord)
 	return chord:find("-") ~= nil or chord:match("^F%d+$") ~= nil
 end
 
-local card -- made on first show
-local chosen -- the key the card offers, as a binding string ("CTRL-SPACE")
-local confirm -- a taken key pressed once: the second press takes it
+local card
+local chosen
+local confirm
 
 local function words(key)
 	return table.concat(ns.keyParts(key, GetBindingText), " + ")
@@ -61,7 +52,6 @@ local function keycap(parent)
 end
 
 local function refresh()
-	-- Keycaps with "+" between them, centred as one row.
 	local parts = ns.keyParts(chosen, GetBindingText)
 	local total, prev = 0, nil
 	for i, part in ipairs(parts) do
@@ -119,7 +109,6 @@ local function notNow()
 end
 
 local function build()
-	-- The search box's own look, where the box opens.
 	local f = CreateFrame("Frame", "LookupSetup", UIParent)
 	f:SetSize(380, 182)
 	f:SetPoint("TOP", 0, -140)
@@ -165,7 +154,6 @@ local function build()
 	skip:GetFontString():SetPoint("RIGHT")
 	skip:SetScript("OnClick", notNow)
 
-	-- Only presses that can be a choice stay here. Movement and chat keys pass to the game.
 	f:EnableKeyboard(true)
 	f:SetScript("OnKeyDown", function(self, key)
 		if key == "ESCAPE" then
@@ -183,28 +171,24 @@ local function build()
 			chosen, confirm = chord, nil
 			refresh()
 		elseif ns.keyConflict(chosen, GetBindingAction) and confirm ~= chosen then
-			confirm = chosen -- a taken key: the second press takes it
+			confirm = chosen
 			refresh()
 		else
 			bind()
 		end
 	end)
 
-	-- Combat: keyboard frames cannot change then, so the card goes until the next login.
 	f:RegisterEvent("PLAYER_REGEN_DISABLED")
 	f:SetScript("OnEvent", function(self)
 		self.byGame = true
 		self:Hide()
 	end)
-	-- The game hides it too (a loading screen runs CloseAllWindows). Only the player closing a
-	-- card they had time to see counts as done.
 	f:SetScript("OnHide", function(self)
 		if not self.byGame and GetTime() - (self.shownAt or 0) >= 1 then LookupDB.setup = true end
 	end)
 	return f
 end
 
----Show the key card. It offers the key Lookup has, or the first free suggestion.
 function ns.showSetup()
 	if InCombatLockdown() then
 		print("Lookup: setup opens after combat.")
@@ -219,11 +203,7 @@ function ns.showSetup()
 	refresh()
 end
 
-
----At login: the window, once, for a player with no Lookup key. Out of combat, and after the
----game's own PLAYER_ENTERING_WORLD handler, which closes every window (CloseAllWindows).
 function ns.firstRun()
-	LookupDB.bound = nil -- the old auto-bind flag
 	if LookupDB.setup then return end
 	if GetBindingKey("LOOKUP_TOGGLE") then
 		LookupDB.setup = true
@@ -236,7 +216,7 @@ function ns.firstRun()
 		if InCombatLockdown() then
 			wait:RegisterEvent("PLAYER_REGEN_ENABLED")
 		elseif event == "PLAYER_ENTERING_WORLD" then
-			C_Timer.After(0, ns.showSetup) -- the next frame: after every handler of this event
+			C_Timer.After(0, ns.showSetup)
 		else
 			ns.showSetup()
 		end

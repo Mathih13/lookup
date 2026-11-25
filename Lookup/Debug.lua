@@ -1,8 +1,3 @@
--- Development log, saved to SavedVariables (LookupLog) so it can be read from disk after
--- /reload. Keeps the tail of earlier sessions, so several reloads can be read at once.
---
--- Only in development copies: the release packager comments out the debug block below, so
--- players get a no-op ns.log, no error handler and no saved log.
 local addonName, ns = ...
 
 ---@diagnostic disable-next-line: duplicate-set-field
@@ -10,8 +5,8 @@ function ns.log() end
 
 --@debug@
 
-local MAX_ENTRIES = 1000 -- ponytail: keeps the first 1000 lines per session; the first error is usually the root cause
-local KEEP_OLD = 1000 -- lines kept from earlier sessions
+local MAX_ENTRIES = 1000
+local KEEP_OLD = 1000
 local entries, count = {}, 0
 
 local function str(v)
@@ -19,7 +14,6 @@ local function str(v)
 	return tostring(v)
 end
 
----Append one line to the session log. Arguments are joined with spaces.
 ---@diagnostic disable-next-line: duplicate-set-field
 function ns.log(...)
 	if count >= MAX_ENTRIES then return end
@@ -32,8 +26,6 @@ function ns.log(...)
 	if count == MAX_ENTRIES then entries[#entries] = "log full, later lines dropped" end
 end
 
--- Record every Lua error (from any addon), then pass it to the previous handler
--- so the in-game error display still works.
 local previousHandler = geterrorhandler()
 local inHandler = false
 seterrorhandler(function(msg)
@@ -45,9 +37,6 @@ seterrorhandler(function(msg)
 	return previousHandler(msg)
 end)
 
--- The game loads saved data after this file runs: merge it at ADDON_LOADED and
--- assign the global at logout. /reload also fires PLAYER_LOGOUT, then writes SavedVariables.
--- Blocked and forbidden actions are taint symptoms, from any addon.
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_LOGOUT")

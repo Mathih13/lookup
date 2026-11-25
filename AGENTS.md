@@ -2,6 +2,10 @@
 
 WoW addon for **WoW Forever** (`_forever_`, Interface `16001`). Forever runs the Midnight retail client, so it uses the mainline 12.x API and the Midnight addon limits. Classic-only APIs are absent. Product decisions live in `docs/design.md`: read it before you change behaviour or add a category, and update it when a decision changes. Combat and unit data can be **secret values**: test with `issecretvalue(v)` before you compare, do maths on or store a value.
 
+## Comments
+
+Write no comments in Lua: give the value or the helper a name that says it. Record a non-obvious decision in `docs/adr/`, and file an issue for a shortcut. `make check` enforces this with a ratchet (`docs/adr/0001-no-code-comments.md`). `/delete-comment` audits the comments that remain.
+
 ## Loop
 
 1. Edit files in `Lookup/`. A Claude Code hook runs `make check test` in the background after every Edit or Write on a `.lua` file and wakes you on failure (about 10 s). Before asking for a reload, run `make check test` yourself.

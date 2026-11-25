@@ -1,33 +1,42 @@
--- First-time setup: which key to suggest, and what a taken key does now.
-local load = dofile("tests/stubs.lua")
-local ns = load({ "Lookup/Setup.lua" })
+local ns = dofile("tests/stubs.lua")({ "Lookup/Setup.lua" })
 
-local bound = {}
-local function actionOf(key) return bound[key] end
+local function bindings(bound)
+	return function(key) return bound[key] end
+end
 
--- Nothing bound: the first suggestion.
-assert(ns.suggestKey(actionOf) == "CTRL-SPACE")
--- Taken keys are skipped.
-bound["CTRL-SPACE"] = "TOGGLEAUTORUN"
-assert(ns.suggestKey(actionOf) == "CTRL-F")
--- All taken: the first suggestion, and the window says what it replaces.
-bound["CTRL-F"], bound["SHIFT-F"] = "FOCUSTARGET", "TOGGLEFRIENDSTAB"
-assert(ns.suggestKey(actionOf) == "CTRL-SPACE")
-BINDING_NAME_TOGGLEAUTORUN = "Toggle Autorun"
-assert(ns.keyConflict("CTRL-SPACE", actionOf) == "Toggle Autorun")
--- No binding name: the command itself.
-assert(ns.keyConflict("CTRL-F", actionOf) == "FOCUSTARGET")
--- Free, or already Lookup's: no conflict.
-assert(ns.keyConflict("ALT-L", actionOf) == nil)
-bound["ALT-L"] = "LOOKUP_TOGGLE"
-assert(ns.keyConflict("ALT-L", actionOf) == nil)
+test("with nothing bound, the first suggestion wins", function()
+	assert(ns.suggestKey(bindings({})) == "CTRL-SPACE")
+end)
 
--- Keycap labels: modifiers in short form, the key as the game names it.
-local text = function(k) return k == "SPACE" and "Spacebar" or k end
-local parts = ns.keyParts("CTRL-SHIFT-SPACE", text)
-assert(parts[1] == "Ctrl" and parts[2] == "Shift" and parts[3] == "Spacebar" and #parts == 3)
--- Only combos and F keys are choices: plain keys keep moving the character.
-assert(ns.isKeyChoice("CTRL-SPACE") and ns.isKeyChoice("F5") and ns.isKeyChoice("SHIFT-F"))
-assert(not ns.isKeyChoice("W") and not ns.isKeyChoice("SPACE") and not ns.isKeyChoice("F"))
+test("taken suggestions are skipped", function()
+	assert(ns.suggestKey(bindings({ ["CTRL-SPACE"] = "TOGGLEAUTORUN" })) == "CTRL-F")
+end)
 
-print("ok")
+test("with every suggestion taken, the first one wins and the card names what it replaces", function()
+	local actionOf = bindings({ ["CTRL-SPACE"] = "TOGGLEAUTORUN", ["CTRL-F"] = "FOCUSTARGET", ["SHIFT-F"] = "TOGGLEFRIENDSTAB" })
+	BINDING_NAME_TOGGLEAUTORUN = "Toggle Autorun"
+	assert(ns.suggestKey(actionOf) == "CTRL-SPACE")
+	assert(ns.keyConflict("CTRL-SPACE", actionOf) == "Toggle Autorun")
+end)
+
+test("a binding with no name is named by its command", function()
+	assert(ns.keyConflict("CTRL-F", bindings({ ["CTRL-F"] = "FOCUSTARGET" })) == "FOCUSTARGET")
+end)
+
+test("a free key, or one that already opens Lookup, is no conflict", function()
+	assert(ns.keyConflict("ALT-L", bindings({})) == nil)
+	assert(ns.keyConflict("ALT-L", bindings({ ["ALT-L"] = "LOOKUP_TOGGLE" })) == nil)
+end)
+
+test("keycaps show modifiers in short form and the key as the game names it", function()
+	local text = function(k) return k == "SPACE" and "Spacebar" or k end
+	local parts = ns.keyParts("CTRL-SHIFT-SPACE", text)
+	assert(parts[1] == "Ctrl" and parts[2] == "Shift" and parts[3] == "Spacebar" and #parts == 3)
+end)
+
+test("only combos and F keys are choices, so plain keys keep moving the character", function()
+	assert(ns.isKeyChoice("CTRL-SPACE") and ns.isKeyChoice("F5") and ns.isKeyChoice("SHIFT-F"))
+	assert(not ns.isKeyChoice("W") and not ns.isKeyChoice("SPACE") and not ns.isKeyChoice("F"))
+end)
+
+done()

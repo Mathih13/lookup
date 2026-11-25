@@ -93,7 +93,7 @@ Decided 2026-11-19 from mock v13.
 - Enter runs the command as it is. Space on a command makes it a grey token in the field, and the rest of the query is its argument.
 - With a token, the rows are the arguments you ran before with that command (`LookupDB.args`, the 20 most recent per command), then a last row that runs exactly what you typed. Backspace on an empty argument removes the token.
 - The Query session (`Session.lua`) owns all of this, the calculator and pick memory; `UI.lua` paints its view. `/lookup reset` forgets entries and arguments.
-- A typed line that matches no command, or that has a space, gets an "As typed" row, so any command still runs.
+- A typed line that matches no command, or that has a space, gets an "As typed" row, so any command still runs. A line over 255 characters (the macro line limit) cannot run: the status line says so, Enter does nothing, and Lookup does not remember the argument.
 - Later: Blizzard commands with known arguments (`/w` and `/invite` take people, `/join` takes channels), and subcommands from AceConfig tables. Learning subcommands from `help` output is optional and runs only on request.
 
 ## Other addons

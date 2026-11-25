@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Bag items: Shift+Enter uses the item (food, potions, quest items) or puts on gear.
+- A typed command over 255 characters now says it is too long. Before, Enter did nothing and the text was still remembered.
+- Addon key bindings that act when you release the key now get the release when they run from Lookup.
 
 ## v0.2.0
 
