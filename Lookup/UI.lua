@@ -282,18 +282,28 @@ function ns.select(i)
 	arm()
 end
 
+local function withoutFirstCharacter(utf8)
+	local _, last = utf8:find("^[%z\1-\127\194-\244][\128-\191]*")
+	return utf8:sub((last or 1) + 1)
+end
+
 local function refresh()
 	local view = session:view()
-	local shown = view.query:gsub("|", "||")
-	if view.token then shown = "|cff9a9a9a" .. view.token .. "|r " .. shown end
-	input:SetText(shown)
+	count:SetText(view.count)
+	local room = field:GetWidth() - NAME_X - 20 - (view.count ~= "" and count:GetStringWidth() + 12 or 0)
+	local prefix = view.token and ("|cff9a9a9a" .. view.token .. "|r ") or ""
+	local query, cut = view.query, false
+	repeat
+		input:SetText(prefix .. (cut and "…" or "") .. (query:gsub("|", "||")))
+		if input:GetStringWidth() <= room or query == "" then break end
+		query, cut = withoutFirstCharacter(query), true
+	until false
 	local width = input:GetStringWidth()
 	placeholder:SetText(view.hint or "")
 	placeholder:SetShown(view.hint ~= nil)
 	placeholder:ClearAllPoints()
 	placeholder:SetPoint("LEFT", input, "LEFT", width > 0 and width + 4 or 2, 0)
 	caret:SetPoint("LEFT", input, "LEFT", width + 1, 0)
-	count:SetText(view.count)
 	recentLabel:SetShown(view.header ~= nil)
 	recentLabel:SetText(view.header or "")
 	local top = ROWS_TOP + (view.header and HEADER_H or 0)
